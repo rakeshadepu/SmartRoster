@@ -1,0 +1,81 @@
+# ----------------------
+# Python / Django
+# ----------------------
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.sqlite3
+db.sqlite3
+*.log
+
+# Virtual environment
+venv/
+env/
+ENV/
+.venv/
+
+# Django specific
+*.mo
+*.pot
+staticfiles/
+media/
+
+# Migrations (optional: keep if working in team)
+# */migrations/*
+# !*/migrations/__init__.py
+
+# Environment variables
+.env
+.env.*
+
+# ----------------------
+# Testing / Coverage
+# ----------------------
+.coverage
+coverage.xml
+htmlcov/
+.pytest_cache/
+
+# ----------------------
+# Node / Angular
+# ----------------------
+node_modules/
+dist/
+build/
+.tmp/
+.out/
+
+# Angular cache
+.angular/
+.angular/cache/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ----------------------
+# OS / Editor files
+# ----------------------
+.DS_Store
+Thumbs.db
+
+# VS Code
+.vscode/
+
+# JetBrains (PyCharm, WebStorm)
+.idea/
+
+# ----------------------
+# Secrets & Keys
+# ----------------------
+*.pem
+*.key
+
+# ----------------------
+# Misc
+# ----------------------
+*.swp
+*.bak
+*.tmp
