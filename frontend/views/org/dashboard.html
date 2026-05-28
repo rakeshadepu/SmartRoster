@@ -1,0 +1,314 @@
+<div class="app-layout">
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-mark">
+        <div class="brand-icon"><i class="fa-solid fa-building"></i></div>
+        <div>
+          <div class="brand-name">{{org.name}}</div>
+          <div class="brand-sub">Org Admin</div>
+        </div>
+      </div>
+    </div>
+    <div class="sidebar-user">
+      <div class="user-name">{{org.name}}</div>
+      <div class="user-role" style="color:var(--accent)">Organisation Admin</div>
+      <div class="user-id mono" style="font-size:10px">{{org.org_id}}</div>
+    </div>
+    <div class="sidebar-nav">
+      <div class="nav-section-label">Organisation</div>
+      <a class="nav-link active" href="#/org/{{orgId}}/dashboard">
+        <span class="nav-icon"><i class="fa-solid fa-user"></i></span><span>Employees</span>
+      </a>
+      <!-- <a class="nav-link" ng-click="showSettings=!showSettings;showForm=false" style="cursor:pointer">
+        <span class="nav-icon"></span><span><i class="fa-solid fa-gear"></i>Settings</span>
+      </a> -->
+      <div class="nav-section-label" style="margin-top:8px">Links</div>
+      <a class="nav-link" href="#/org/{{orgId}}/join" target="_blank">
+        <span class="nav-icon">🔗</span><span>Worker Join Link</span>
+      </a>
+      <a class="nav-link" href="#/org/{{orgId}}/global-users">
+        <span class="nav-icon">🔍</span><span>Global Users</span>
+      </a>
+    </div>
+    <div class="sidebar-footer">
+      <button class="btn-logout" ng-click="logout()"><span>⎋</span><span>Sign out</span></button>
+    </div>
+  </nav>
+
+  <!-- Main -->
+  <div class="main-content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Employee Management</div>
+        <div class="page-sub">
+          {{org.name}} &nbsp;·&nbsp;
+          Shop {{(org.shop_open || '').slice(0,5)}} – {{(org.shop_close || '').slice(0,5)}}
+        </div>
+      </div>
+      <div class="flex gap-8">
+        <button class="btn btn-secondary" ng-click="showSettings = !showSettings; showForm = false">
+          ⚙ Settings
+        </button>
+        <a class="btn btn-primary" href="#/org/{{orgId}}/add-user">
+          + Add User
+        </a>
+      </div>
+    </div>
+
+    <div class="page-body">
+
+      <div class="alert alert-error" ng-if="error">⚠ {{error}}</div>
+      <div class="alert alert-success" ng-if="success">✓ {{success}}</div>
+
+      <!-- Created credentials (shown once) -->
+      <div class="password-reveal" ng-if="createdCred" style="margin-bottom:20px">
+        <h4>⚠ Save these credentials — password will NOT be shown again</h4>
+        <div class="credential-row">
+          <div>
+            <div class="credential-label">Employee</div>
+            <div class="credential-value">{{createdCred.full_name}}</div>
+          </div>
+        </div>
+        <div class="credential-row">
+          <div>
+            <div class="credential-label">User ID</div>
+            <div class="credential-value mono">{{createdCred.user_id}}</div>
+          </div>
+          <button class="credential-copy" ng-click="copyText(createdCred.user_id, $event)">Copy</button>
+        </div>
+        <div class="credential-row">
+          <div>
+            <div class="credential-label">Password</div>
+            <div class="credential-value mono">{{createdCred.plain_password}}</div>
+          </div>
+          <button class="credential-copy" ng-click="copyText(createdCred.plain_password, $event)">Copy</button>
+        </div>
+        <div class="alert alert-info" style="margin-top:10px; font-size:12px">
+          This employee can now log in at <strong>#/login</strong> using their User ID and password.
+        </div>
+        <button class="btn btn-sm btn-secondary mt-8" ng-click="createdCred = null">Dismiss</button>
+      </div>
+
+      <!-- Settings panel -->
+      <div class="card mb-24" ng-if="showSettings" style="margin-bottom:20px">
+        <div class="card-header">
+          <div class="card-title">⚙ Organisation Settings</div>
+          <button class="btn btn-sm btn-secondary" ng-click="showSettings = false">Close</button>
+        </div>
+        <div class="card-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Organisation Name</label>
+              <input type="text" class="form-control" ng-model="settingsForm.name">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Admin Email</label>
+              <input type="email" class="form-control" ng-model="settingsForm.email">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Shop Opens</label>
+              <input type="time" class="form-control" ng-model="settingsForm.shop_open">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Shop Closes</label>
+              <input type="time" class="form-control" ng-model="settingsForm.shop_close">
+            </div>
+          </div>
+          <div style="margin-top:12px; padding-top:12px; border-top:1px solid var(--border)">
+            <div class="text-xs text-dim fw-600"
+              style="margin-bottom:10px;text-transform:uppercase;letter-spacing:.8px">
+              Change Password (optional)
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">New Password</label>
+                <input type="password" class="form-control" ng-model="settingsForm.password"
+                  placeholder="Leave blank to keep current">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Confirm Password</label>
+                <input type="password" class="form-control" ng-model="settingsForm.confirm_pw">
+              </div>
+            </div>
+          </div>
+          <button class="btn btn-primary mt-8" ng-click="saveSettings()">Save Settings</button>
+        </div>
+      </div>
+
+
+
+      <!-- Org owner card — data lives on Organisation, not a User row -->
+      <div class="card mb-16" ng-if="org"
+        style="margin-bottom:14px;background:rgba(200,168,75,0.06);border-color:var(--accent-dim)">
+        <div class="card-body"
+          style="padding:14px 18px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px">
+          <div>
+            <div class="text-xs fw-600"
+              style="text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px;color:var(--accent)">
+              🔑 Organisation Owner
+            </div>
+            <div class="fw-600 text-cream">{{org.owner_name}}</div>
+            <div class="text-xs text-dim">{{org.email}}</div>
+          </div>
+          <div class="text-xs text-dim">
+            Logs in via email + password &nbsp;·&nbsp; no user ID
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats row -->
+      <div class="stats-grid" style="grid-template-columns:repeat(3,1fr); margin-bottom:20px" ng-if="!loading">
+        <div class="stat-card">
+          <div class="stat-label">Total Employees</div>
+          <div class="stat-value stat-accent">{{employees.length}}</div>
+          <div class="stat-sub">in this organisation</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Active</div>
+          <div class="stat-value">{{(employees | filter:{is_active:true}).length}}</div>
+          <div class="stat-sub">can log in</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Shop Hours</div>
+          <div class="stat-value" style="font-size:16px">
+            {{(org.shop_open || '').slice(0,5)}}
+          </div>
+          <div class="stat-sub">to {{(org.shop_close || '').slice(0,5)}}</div>
+        </div>
+      </div>
+
+      <!-- Loading -->
+      <div ng-if="loading" class="text-dim flex items-center gap-8">
+        <span class="spinner"></span> Loading…
+      </div>
+
+      <!-- Employee table -->
+      <div class="card" ng-if="!loading">
+        <div class="card-header">
+          <div class="card-title">Employees</div>
+          <span class="badge badge-green">{{employees.length}} total</span>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>User ID</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr ng-if="employees.length === 0">
+                <td colspan="4" class="text-dim text-sm">
+                  No employees yet.
+                  <button class="btn btn-sm btn-primary" ng-click="showForm = true" style="margin-left:10px">
+                    Add first employee
+                  </button>
+                </td>
+              </tr>
+              <tr ng-repeat="emp in employees">
+                <td>
+                  <div class="fw-600 text-cream">{{emp.full_name}}</div>
+                  <div class="text-xs text-dim">Employee · can manage workers &amp; timetables</div>
+                </td>
+                <td class="mono text-sm text-dim">{{emp.user_id}}</td>
+                <td>
+                  <span class="badge" ng-class="emp.is_active ? 'badge-green' : 'badge-red'">
+                    {{emp.is_active ? 'Active' : 'Inactive'}}
+                  </span>
+                </td>
+                <td>
+                  <div class="td-actions">
+                    <button class="btn btn-sm btn-secondary btn-icon" ng-click="openEdit(emp)" title="Edit">✎</button>
+                    <button class="btn btn-sm btn-secondary btn-icon" ng-click="resetPassword(emp)"
+                      title="Reset password">🔑</button>
+                    <button class="btn btn-sm btn-danger btn-icon" ng-click="deactivate(emp)" ng-if="emp.is_active"
+                      title="Deactivate">✕</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Info box: what employees can do -->
+      <div class="alert alert-info mt-16" style="margin-top:18px">
+        <div>
+          <div class="fw-600 mb-4">Employees log in at the standard login page</div>
+          <div class="text-sm">
+            Once an employee account is created, they log in at
+            <a href="#/org/{{orgId}}/join" style="color:inherit;text-decoration:underline">#/login</a>
+            using their User ID and password. Employees can then create workers,
+            set availability rules, generate timetables, and export PDFs.
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /page-body -->
+  </div><!-- /main-content -->
+</div>
+
+<!-- Edit employee modal -->
+<div class="modal-overlay" ng-if="editModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Edit Employee</div>
+      <button class="modal-close" ng-click="editModal = false">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Full Name</label>
+        <input type="text" class="form-control" ng-model="editEmployee.full_name">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Status</label>
+        <select class="form-control" ng-model="editEmployee.is_active">
+          <option ng-value="true">Active</option>
+          <option ng-value="false">Inactive</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" ng-click="editModal = false">Cancel</button>
+      <button class="btn btn-primary" ng-click="saveEdit()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Reset password modal -->
+<div class="modal-overlay" ng-if="resetModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">New Password</div>
+      <button class="modal-close" ng-click="resetModal = false">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-warn" style="margin-bottom:16px">
+        ⚠ Save this password — it will NOT be shown again.
+      </div>
+      <div class="credential-row">
+        <div>
+          <div class="credential-label">User ID</div>
+          <div class="credential-value mono">{{resetCred.user_id}}</div>
+        </div>
+        <button class="credential-copy" ng-click="copyText(resetCred.user_id, $event)">Copy</button>
+      </div>
+      <div class="credential-row">
+        <div>
+          <div class="credential-label">New Password</div>
+          <div class="credential-value mono">{{resetCred.password}}</div>
+        </div>
+        <button class="credential-copy" ng-click="copyText(resetCred.password, $event)">Copy</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" ng-click="resetModal = false">Done</button>
+    </div>
+  </div>
+</div>

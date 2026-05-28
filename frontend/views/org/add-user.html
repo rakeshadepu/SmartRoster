@@ -1,0 +1,209 @@
+<div class="app-layout">
+  <nav class="sidebar">
+    <div class="sidebar-brand"><div class="brand-mark"><div class="brand-icon">🏢</div><div><div class="brand-name">Org Admin</div><div class="brand-sub">Add User</div></div></div></div>
+    <div class="sidebar-nav">
+      <div class="nav-section-label">Navigation</div>
+      <a class="nav-link" href="#/org/{{orgId}}/dashboard"><span class="nav-icon">←</span><span>Back to Dashboard</span></a>
+      <a class="nav-link" href="#/org/{{orgId}}/global-users"><span class="nav-icon"><i class="fa-solid fa-magnifying-glass"></i></span><span>Global Users</span></a>
+    </div>
+    <div class="sidebar-footer"><button class="btn-logout" ng-click="goBack()"><span>←</span><span>Dashboard</span></button></div>
+  </nav>
+
+  <div class="main-content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Add User</div>
+        <div class="page-sub">Create a new employee or worker account</div>
+      </div>
+      <a class="btn btn-secondary" href="#/org/{{orgId}}/dashboard">← Dashboard</a>
+    </div>
+
+    <div class="page-body">
+
+      <!-- ── Success: credentials ── -->
+      <div ng-if="created">
+        <div class="password-reveal">
+          <h4>User created — save credentials now</h4>
+          <div class="credential-row">
+            <div><div class="credential-label">Name</div>
+                 <div class="credential-value">{{created.user.full_name}}</div></div>
+          </div>
+          <div class="credential-row">
+            <div><div class="credential-label">User ID</div>
+                 <div class="credential-value mono">{{created.user.user_id}}</div></div>
+            <button class="credential-copy" ng-click="copyText(created.user.user_id, $event)">Copy</button>
+          </div>
+          <div class="credential-row" ng-if="created.plain_password">
+            <div><div class="credential-label">Password</div>
+                 <div class="credential-value mono">{{created.plain_password}}</div></div>
+            <button class="credential-copy" ng-click="copyText(created.plain_password, $event)">Copy</button>
+          </div>
+          <div class="credential-row">
+            <div><div class="credential-label">Role</div>
+                 <div class="credential-value">{{created.user.role}} · {{created.user.work_type}}</div></div>
+          </div>
+        </div>
+        <div class="alert alert-warn" style="font-size:12px;margin:14px 0">
+          ⚠ Password shown once only. The user logs in at
+          <strong>#/org/{{orgId}}/join</strong> with their User ID.
+        </div>
+        <div class="flex gap-8">
+          <button class="btn btn-secondary" ng-click="addAnother()">+ Add Another User</button>
+          <a class="btn btn-primary" href="#/org/{{orgId}}/dashboard">Back to Dashboard</a>
+        </div>
+      </div>
+
+      <!-- ── Form ── -->
+      <div ng-if="!created" style="max-width:680px">
+        <div class="alert alert-error" ng-if="error">⚠ {{error}}</div>
+
+        <div class="card">
+          <div class="card-body">
+
+            <!-- Personal Details -->
+            <div class="form-section-label">Personal Details</div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">First Name *</label>
+                <input type="text" class="form-control" ng-model="form.first_name" placeholder="Maria">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Last Name *</label>
+                <input type="text" class="form-control" ng-model="form.last_name" placeholder="Schmidt">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Date of Birth</label>
+                <input type="date" class="form-control" ng-model="form.dob">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Nationality</label>
+                <input type="text" class="form-control" ng-model="form.nationality" placeholder="German">
+              </div>
+            </div>
+
+            <!-- Contact -->
+            <div class="form-section-label" style="margin-top:20px">Contact</div>
+            <div class="form-group">
+              <label class="form-label">Email Address *
+                <span class="text-xs text-dim" style="text-transform:none;letter-spacing:0"> — globally unique across all organisations</span>
+              </label>
+              <input type="email" class="form-control" ng-model="form.email" placeholder="maria.schmidt@email.com">
+            </div>
+
+            <!-- Phone with country picker -->
+            <div class="form-group">
+              <label class="form-label">Mobile Number *
+                <span class="text-xs text-dim" style="text-transform:none;letter-spacing:0"> — globally unique</span>
+              </label>
+              <div style="display: grid; grid-template-columns: 90px 1fr; gap: 10px">
+                <select class="form-control" style="flex-shrink:0"
+                        ng-model="selectedCountry"
+                        ng-options="c as (c.flag + ' ' + c.name + ' (' + c.code + ')') for c in countries track by c.code"
+                        ng-change="onCountryChange()">
+                </select>
+                <div style="flex:1;position:relative">
+                  <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);
+                               color:var(--text-dim);font-size:12px;pointer-events:none;font-family:monospace">
+                    {{selectedCountry.code}}
+                  </span>
+                  <input type="tel" class="form-control" ng-model="form.phone"
+                         placeholder="{{selectedCountry.digits}} digits, no leading 0"
+                         style="padding-left:48px">
+                </div>
+              </div>
+              <div ng-if="phoneError" style="margin-top:5px;font-size:12px;color:#e74c3c">⚠ {{phoneError}}</div>
+              <div ng-if="phoneOk" style="margin-top:5px;font-size:12px;color:var(--olive-light)">✓ Valid {{selectedCountry.name}} number</div>
+            </div>
+
+            <!-- Employment -->
+            <div class="form-section-label" style="margin-top:20px">Employment</div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Role *</label>
+                <select class="form-control" ng-model="form.role">
+                  <option value="WORKER">Worker</option>
+                  <option value="EMPLOYEE">Employee (Manager)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Work Type *</label>
+                <select class="form-control" ng-model="form.work_type">
+                  <option value="FULL_TIME">Full Time (40h/week)</option>
+                  <option value="PART_TIME">Part Time (20h/week)</option>
+                  <option value="MINIJOB">Mini Job (10h/week)</option>
+                </select>
+              </div>
+            </div>
+            <div class="alert alert-info" style="font-size:11px;margin-top:-4px">
+              Capacity rules: 1 full-time only &nbsp;|&nbsp; up to 2 part-time &nbsp;|&nbsp;
+              up to 4 mini-jobs &nbsp;|&nbsp; 1 part-time + 2 mini-jobs
+            </div>
+
+            <!-- Banking -->
+            <div class="form-section-label" style="margin-top:20px">Banking (optional)</div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">IBAN</label>
+                <input type="text" class="form-control" ng-model="form.iban" placeholder="DE89370400440532013000">
+              </div>
+              <div class="form-group">
+                <label class="form-label">BIC / SWIFT</label>
+                <input type="text" class="form-control" ng-model="form.bic" placeholder="COBADEFFXXX">
+              </div>
+            </div>
+
+            <!-- Address -->
+            <div class="form-section-label" style="margin-top:20px">Address (optional)</div>
+            <div style="display:grid;grid-template-columns:90px 1fr;gap:10px">
+              <div class="form-group">
+                <label class="form-label">No.</label>
+                <input type="text" class="form-control" ng-model="form.house_number" placeholder="12A">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Street</label>
+                <input type="text" class="form-control" ng-model="form.street" placeholder="Hauptstraße">
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div class="form-group">
+                <label class="form-label">City</label>
+                <input type="text" class="form-control" ng-model="form.city" placeholder="Berlin">
+              </div>
+              <div class="form-group">
+                <label class="form-label">ZIP Code</label>
+                <input type="text" class="form-control" ng-model="form.zip_code" placeholder="10115">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Country</label>
+              <input type="text" class="form-control" ng-model="form.country" placeholder="Germany">
+            </div>
+
+            <!-- Submit -->
+            <button class="btn btn-primary btn-full"
+                    ng-click="submit()"
+                    ng-disabled="loading || !form.first_name || !form.last_name ||
+                                 !form.email || !phoneOk"
+                    style="margin-top:20px">
+              <span ng-if="loading"><span class="spinner"></span></span>
+              <span ng-if="!loading">Create User Account</span>
+            </button>
+
+          </div>
+        </div>
+
+      </div><!-- /form -->
+    </div>
+  </div>
+</div>
+
+<style>
+.form-section-label {
+  font-size:10px; font-weight:700; text-transform:uppercase;
+  letter-spacing:.9px; color:var(--text-dim);
+  margin-bottom:10px; padding-bottom:6px;
+  border-bottom:1px solid var(--border);
+}
+</style>

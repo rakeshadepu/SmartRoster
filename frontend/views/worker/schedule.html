@@ -1,0 +1,203 @@
+<div class="app-layout">
+  <nav class="sidebar">
+    <div class="sidebar-brand"><div class="brand-mark"><div class="brand-icon">📅</div><div><div class="brand-name">Timetable</div><div class="brand-sub">Planner</div></div></div></div>
+    <div class="sidebar-user"><div class="user-name">{{user.full_name}}</div><div class="user-role">{{user.role}}</div><div class="user-id">{{user.user_id}}</div></div>
+    <div class="sidebar-nav">
+      <div class="nav-section-label">Management</div>
+      <a class="nav-link " href="#/org/{{orgId}}/u/{{userId}}/dashboard"><span class="nav-icon">⊞</span><span>Dashboard</span></a>
+      <a class="nav-link " href="#/org/{{orgId}}/u/{{userId}}/manage"><span class="nav-icon">👥</span><span>Workers</span></a>
+      <a class="nav-link active" href="#/org/{{orgId}}/u/{{userId}}/schedule"><span class="nav-icon">📋</span><span>Timetable</span></a>
+      <div class="nav-section-label" style="margin-top:8px">Organisation</div>
+      <a class="nav-link " href="#/org/{{orgId}}/u/{{userId}}/settings"><span class="nav-icon">⚙</span><span>Settings</span></a>
+    </div>
+    <div class="sidebar-footer"><button class="btn-logout" ng-click="logout()"><span>⎋</span><span>Sign out</span></button></div>
+  </nav>
+
+  <div class="main-content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Timetable</div>
+        <div class="page-sub">Generate, edit and publish weekly schedules</div>
+      </div>
+    </div>
+    <div class="page-body">
+
+      <div class="alert alert-error"   ng-if="error">⚠ {{error}}</div>
+      <div class="alert alert-success" ng-if="success">✓ {{success}}</div>
+      <div class="alert alert-warn"    ng-if="warnings.length">
+        <div>
+          <div class="fw-600 mb-4">Scheduler warnings:</div>
+          <div ng-repeat="w in warnings" class="text-sm">• {{w}}</div>
+        </div>
+      </div>
+
+      <!-- Two-column layout: left list, right detail -->
+      <div class="flex gap-16" style="align-items:flex-start">
+
+        <!-- Left: Generate + list -->
+        <div style="width:260px; flex-shrink:0">
+
+          <!-- Generate card -->
+          <div class="card mb-16" style="margin-bottom:14px">
+            <div class="card-header"><div class="card-title">Generate</div></div>
+            <div class="card-body">
+              <div class="form-group">
+                <label class="form-label">Week Start (Monday)</label>
+                <input type="date" class="form-control" ng-model="genForm.week_start">
+              </div>
+              <div class="form-group flex gap-8 items-center">
+                <input type="checkbox" id="regen" ng-model="genForm.regenerate" style="accent-color:var(--olive)">
+                <label for="regen" class="text-sm" style="cursor:pointer">Overwrite existing</label>
+              </div>
+              <button class="btn btn-primary btn-full" ng-click="generate()" ng-disabled="generating">
+                <span ng-if="generating"><span class="spinner"></span></span>
+                <span ng-if="!generating">⚡ Generate</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Timetable list -->
+          <div class="card">
+            <div class="card-header"><div class="card-title">All Timetables</div></div>
+            <div ng-if="loading" class="card-body text-dim text-sm"><span class="spinner"></span></div>
+            <div ng-repeat="tt in timetables"
+                 ng-click="selectTimetable(tt)"
+                 style="padding:12px 16px; border-bottom:1px solid var(--border); cursor:pointer;
+                        transition:background .15s"
+                 ng-style="{ background: selected && selected.id === tt.id ? 'var(--surface2)' : '' }"
+                 onmouseover="this.style.background='var(--surface2)'"
+                 onmouseout="this.style.background= this.classList.contains('sel') ? 'var(--surface2)' : ''">
+              <div class="flex justify-between items-center">
+                <div class="fw-600 text-cream text-sm">{{tt.week_start}}</div>
+                <span class="badge" ng-class="tt.status === 'PUBLISHED' ? 'badge-published' : 'badge-draft'">
+                  {{tt.status}}
+                </span>
+              </div>
+              <div class="text-xs text-dim mt-4">{{tt.total_shifts}} shifts</div>
+            </div>
+            <div class="card-body text-dim text-sm" ng-if="timetables.length === 0 && !loading">
+              No timetables yet. Generate one above.
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: selected timetable detail -->
+        <div style="flex:1; min-width:0" ng-if="selected">
+
+          <!-- Header bar -->
+          <div class="card mb-16" style="margin-bottom:14px">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Week of {{selected.week_start}}
+                  <span class="badge ml-4" ng-class="selected.status === 'PUBLISHED' ? 'badge-published' : 'badge-draft'"
+                    style="margin-left:8px; vertical-align:middle">{{selected.status}}</span>
+                </div>
+                <div class="text-xs text-dim mt-4">{{selected.total_shifts}} shifts · {{selected.week_start}} → {{selected.week_end}}</div>
+              </div>
+              <div class="flex gap-8">
+                <button class="btn btn-sm btn-secondary" ng-click="viewMode='grid'" ng-class="viewMode==='grid' ? 'btn-primary' : 'btn-secondary'">Grid</button>
+                <button class="btn btn-sm btn-secondary" ng-click="loadHtmlView()" ng-class="viewMode==='html' ? 'btn-primary' : 'btn-secondary'">Preview</button>
+                <button class="btn btn-sm btn-accent" ng-click="downloadPdf()">⬇ PDF</button>
+                <button class="btn btn-sm btn-primary" ng-click="publish()" ng-if="selected.status !== 'PUBLISHED'">Publish</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- HTML preview -->
+          <div class="card" ng-if="viewMode === 'html' && htmlView" style="padding:0">
+            <div style="padding:16px; overflow:auto; max-height:70vh">
+              <div ng-bind-html="htmlView"></div>
+            </div>
+          </div>
+
+          <!-- Grid view -->
+          <div class="card" ng-if="viewMode === 'grid'">
+            <div class="tt-grid">
+              <table class="tt-table">
+                <thead>
+                  <tr>
+                    <th class="tt-worker-hdr">Worker</th>
+                    <th ng-repeat="d in days">{{dayLabel(d)}}</th>
+                    <th>Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr ng-if="selected.shifts.length === 0">
+                    <td colspan="9" class="text-dim text-sm" style="padding:20px">No shifts scheduled.</td>
+                  </tr>
+                  <tr ng-repeat="worker in gridWorkers(selected)">
+                    <td class="tt-worker-cell">
+                      <div class="tt-worker-name">{{worker[0]}}</div>
+                      <div class="tt-worker-type">{{worker[1].wt.replace('_',' ')}}</div>
+                    </td>
+                    <td ng-repeat="d in days">
+                      <div ng-init="shift = shiftForWorkerDay(selected, worker[0], d)">
+                        <div ng-if="shift" class="tt-shift" style="cursor:pointer" ng-click="openEditShift(shift)">
+                          <div class="tt-shift-time">{{shift.start_time.slice(0,5)}}–{{shift.end_time.slice(0,5)}}</div>
+                          <div class="tt-shift-hrs">{{shift.hours}}h</div>
+                        </div>
+                        <div ng-if="!shift" class="tt-off">–</div>
+                      </div>
+                    </td>
+                    <td class="tt-total">{{workerTotals(selected, worker[0])}}h</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Summary -->
+            <div style="padding:16px;border-top:1px solid var(--border)" ng-if="summary && (summary | json) !== '{}'">
+              <div class="text-xs text-dim fw-600" style="text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">Hour Utilisation</div>
+              <div ng-repeat="(name, data) in summary" class="flex items-center gap-12 mb-8">
+                <div style="width:140px" class="text-sm fw-600">{{name}}</div>
+                <div style="flex:1;background:var(--border);border-radius:3px;height:6px">
+                  <div style="height:6px;border-radius:3px;background:var(--olive);width:{{data.utilisation_pct}}%"></div>
+                </div>
+                <div class="text-xs text-dim" style="width:80px;text-align:right">{{data.assigned_hours}}h / {{data.budget_hours}}h</div>
+                <div class="text-xs text-green" style="width:36px">{{data.utilisation_pct}}%</div>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /right panel -->
+
+        <div style="flex:1" ng-if="!selected" class="text-dim text-sm"
+             style="padding:40px; text-align:center">
+          Select or generate a timetable to view details.
+        </div>
+
+      </div><!-- /flex row -->
+
+    </div>
+  </div>
+</div>
+
+<!-- Shift edit modal -->
+<div class="modal-overlay" ng-if="editShiftModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Edit Shift — {{editShift.worker_name}}</div>
+      <button class="modal-close" ng-click="editShiftModal = false">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="text-sm text-dim mb-16">{{editShift.day}}</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Start Time</label>
+          <input type="time" class="form-control" ng-model="editShift.start_time">
+        </div>
+        <div class="form-group">
+          <label class="form-label">End Time</label>
+          <input type="time" class="form-control" ng-model="editShift.end_time">
+        </div>
+      </div>
+      <div class="alert alert-info" style="font-size:11px;margin-top:8px">
+        Constraints: within shop hours · max 8h per shift · within weekly budget
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" ng-click="editShiftModal = false">Cancel</button>
+      <button class="btn btn-primary" ng-click="saveShift()">Save Shift</button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,108 @@
+<div class="login-page">
+  <div class="login-card">
+
+    <!-- Loading -->
+    <div ng-if="loading" class="text-dim flex items-center gap-8" style="justify-content:center;padding:30px 0">
+      <span class="spinner"></span> Loading…
+    </div>
+
+    <!-- Org not found -->
+    <div ng-if="!loading && !org">
+      <div class="alert alert-error">
+        ⚠ Organisation not found. Check the link you were sent.
+      </div>
+    </div>
+
+    <!-- Org loaded -->
+    <div ng-if="!loading && org">
+
+      <!-- Header -->
+      <div class="login-brand">
+        <div class="login-icon">🏢</div>
+        <div class="login-title">{{org.name}}</div>
+        <div class="login-sub">{{org.shop_open}} – {{org.shop_close}}</div>
+        <div class="mono text-xs text-dim" style="margin-top:3px">Org. Id: {{org.org_id}}</div>
+      </div>
+
+      <div class="alert alert-error" ng-if="error">⚠ {{error}}</div>
+
+      <!-- ── STEP 1: Pick your name ── -->
+      <div ng-if="step === 'select'">
+
+        <div class="text-sm text-dim" style="margin-bottom:12px">
+          Select your name to continue:
+        </div>
+
+        <!-- Search box (only show if more than 6 users) -->
+        <div ng-if="users.length > 6" class="form-group">
+          <input type="text" class="form-control" ng-model="search" placeholder="Search your name…" autofocus>
+        </div>
+
+        <!-- Name list -->
+        <div ng-if="filteredUsers().length === 0" class="text-dim text-sm" style="padding:12px 0">
+          No users found<span ng-if="search"> matching "{{search}}"</span>.
+        </div>
+
+        <div ng-repeat="u in filteredUsers()" ng-click="selectUser(u)" style="padding:12px 16px; border:1px solid var(--border);
+                    border-radius:var(--radius); margin-bottom:8px;
+                    cursor:pointer; transition:all .15s;
+                    display:flex; align-items:center; justify-content:space-between"
+          onmouseover="this.style.borderColor='var(--olive)';this.style.background='var(--surface2)'"
+          onmouseout="this.style.borderColor='var(--border)';this.style.background=''">
+          <div>
+            <div class="fw-600 text-cream">{{u.full_name}}</div>
+            <div class="text-xs text-dim" style="margin-top:2px">
+              <span ng-if="u.role === 'EMPLOYEE'" style="color:var(--accent);font-weight:600">Employee</span>
+              <span ng-if="u.role === 'WORKER'" style="color:var(--olive-light)">Worker</span>
+            </div>
+          </div>
+          <!-- <span class="mono text-xs text-dim">{{u.user_id}}</span> -->
+        </div>
+
+      </div><!-- /step select -->
+
+      <!-- ── STEP 2: Enter password ── -->
+      <div ng-if="step === 'password'">
+
+        <!-- Selected user card -->
+        <div style="background:var(--surface2); border:1px solid var(--border);
+                    border-radius:var(--radius-lg); padding:14px 16px; margin-bottom:20px;
+                    display:flex; align-items:center; justify-content:space-between">
+          <div>
+            <div class="fw-600 text-cream">{{selectedUser.full_name}}</div>
+            <div class="text-xs" style="margin-top:3px">
+              <span ng-if="selectedUser.role === 'EMPLOYEE'" style="color:var(--accent);font-weight:600">Employee</span>
+              <span ng-if="selectedUser.role === 'WORKER'" style="color:var(--olive-light)">Worker</span>
+            </div>
+            <div class="mono text-xs text-dim" style="margin-top:2px">
+              {{selectedUser.user_id}}
+            </div>
+          </div>
+          <button class="btn btn-sm btn-secondary" ng-click="backToSelect()">
+            Change
+          </button>
+        </div>
+
+        <!-- Password input -->
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input id="passwordInput" type="password" class="form-control" ng-model="form.password"
+            placeholder="Enter your password" ng-keyup="$event.keyCode == 13 && signIn()">
+        </div>
+
+        <button class="btn btn-primary btn-full" ng-click="signIn()" ng-disabled="signingIn || !form.password"
+          style="margin-top:4px">
+          <span ng-if="signingIn"><span class="spinner"></span></span>
+          <span ng-if="!signingIn">Sign In</span>
+        </button>
+
+      </div><!-- /step password -->
+
+    </div><!-- /org loaded -->
+
+    <div style="margin-top:20px;text-align:center">
+      <a href="#/" class="text-xs text-dim">← Back to Home</a>
+    </div>
+
+  </div>
+</div>

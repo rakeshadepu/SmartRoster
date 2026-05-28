@@ -1,0 +1,192 @@
+<div class="login-page">
+  <div class="login-card" style="max-width: 520px">
+    <div class="login-brand">
+      <div class="login-icon"><i class="fa-solid fa-timeline"></i></div>
+      <div class="login-title">Register Organisation</div>
+      <div class="login-sub">
+        Set up your company or school on Timetable Planner
+      </div>
+    </div>
+
+    <!-- ── Success ── -->
+    <div ng-if="created">
+      <div class="password-reveal">
+        <h4>Organisation registered successfully</h4>
+        <div class="credential-row">
+          <div>
+            <div class="credential-label">Organisation</div>
+            <div class="credential-value">{{created.org.name}}</div>
+          </div>
+        </div>
+        <div class="credential-row">
+          <div>
+            <div class="credential-label">Org ID</div>
+            <div class="credential-value mono">{{created.orgId}}</div>
+          </div>
+          <button class="credential-copy" ng-click="copyText(created.orgId, $event)">Copy</button>
+        </div>
+        <div class="credential-row">
+          <div>
+            <div class="credential-label">Employee / Worker Join Link</div>
+            <div style="font-size:11px;color:var(--olive-light);word-break:break-all">{{created.joinUrl}}</div>
+            <div class="text-xs text-dim" style="margin-top:2px">Send this link to employees and workers</div>
+          </div>
+          <button class="credential-copy" ng-click="copyText(created.joinUrl, $event)">Copy</button>
+        </div>
+      </div>
+      <!-- <div class="alert alert-info" style="font-size:12px;margin:14px 0">
+        ℹ You (the owner) log in with your <strong>email + password</strong> or <strong>Org ID + password</strong>.
+        Use <strong>Add User</strong> on your dashboard to create employee and worker accounts.
+      </div> -->
+      <div class="flex gap-8" style="text-align: center;">
+        <button class="btn btn-primary btn-full" ng-click="goToDashboard()">Go to Org Login →</button>
+      </div>
+    </div>
+
+    <!-- ── Registration form ── -->
+    <div ng-if="!created">
+      <div class="alert alert-error" ng-if="error">⚠ {{error}}</div>
+
+      <!-- Organisation details -->
+      <div class="form-section-label">Organisation Details</div>
+      <div class="form-group">
+        <label class="form-label">Organisation Name *</label>
+        <input type="text" class="form-control" ng-model="form.org_name" placeholder="e.g. Acme School, Metro Café" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Owner / Manager Full Name *</label>
+        <input type="text" class="form-control" ng-model="form.owner_name" placeholder="e.g. Maria Schmidt" />
+        <div class="form-hint">
+          This person will also be the first employee account.
+        </div>
+      </div>
+
+      <!-- Contact -->
+      <div class="form-section-label" style="margin-top: 16px">Contact</div>
+      <div class="form-group">
+        <label class="form-label">Admin Email *</label>
+        <input type="email" class="form-control" ng-model="form.email" placeholder="admin@yourcompany.com" />
+      </div>
+
+      <!-- Phone with country flag picker -->
+      <div class="form-group">
+        <label class="form-label">Mobile Number *</label>
+        <div style="display: grid; grid-template-columns: 90px 1fr; gap: 10px">
+          <select class="form-control" ng-model="selectedCountryCode"
+            ng-options="c.code as (c.flag + ' ' + c.name + ' (' + c.code + ')') for c in countries"
+            ng-change="onCountryChange()">
+          </select>
+          <div style="flex: 1; position: relative">
+            <span style="
+                position: absolute;
+                left: 10px;
+                top: 50%;
+                transform: translateY(-50%);
+                color: var(--text-dim);
+                font-size: 13px;
+                pointer-events: none;
+                font-family: monospace;
+              ">
+              <span ng-bind="selectedCountryCode"></span>
+            </span>
+            <input type="tel" class="form-control" ng-model="form.phone" ng-change="validatePhone()"
+              ng-keyup="validatePhone()"
+              placeholder="{{(countries | filter:{code:selectedCountryCode})[0].placeholder}}"
+              style="padding-left: 48px" />
+          </div>
+        </div>
+        <div ng-if="phoneError" style="margin-top: 5px; font-size: 12px; color: #e74c3c">
+          ⚠ {{phoneError}}
+        </div>
+        <div ng-if="phoneOk && !phoneError" style="margin-top: 5px; font-size: 12px; color: var(--olive-light)">
+          ✓ Valid {{(countries | filter:{code:selectedCountryCode})[0].digits}} number
+        </div>
+        <div class="form-hint" ng-if="!phoneError && !phoneOk">
+          Digits only — no spaces, dashes or leading zero. Expected:
+          {{(countries | filter:{code:selectedCountryCode})[0].digits}} digits.
+        </div>
+      </div>
+
+      <!-- Address -->
+      <div class="form-section-label" style="margin-top: 16px">Address</div>
+      <div style="display: grid; grid-template-columns: 90px 1fr; gap: 10px">
+        <div class="form-group">
+          <label class="form-label">No.</label>
+          <input type="text" class="form-control" ng-model="form.house_number" placeholder="12A" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Street Name</label>
+          <input type="text" class="form-control" ng-model="form.street" placeholder="Hauptstraße" />
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px">
+        <div class="form-group">
+          <label class="form-label">City</label>
+          <input type="text" class="form-control" ng-model="form.city" placeholder="Berlin" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">ZIP / Postal Code</label>
+          <input type="text" class="form-control" ng-model="form.zip_code" placeholder="10115" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Country</label>
+        <input type="text" class="form-control" ng-model="form.country" placeholder="Germany" />
+      </div>
+
+      <!-- Shop Hours -->
+      <div class="form-section-label" style="margin-top: 16px">
+        Shop / Opening Hours
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px">
+        <div class="form-group">
+          <label class="form-label">Opens</label>
+          <input type="time" class="form-control" ng-model="form.shop_open" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Closes</label>
+          <input type="time" class="form-control" ng-model="form.shop_close" />
+        </div>
+      </div>
+
+      <!-- Admin Password -->
+      <div class="form-section-label" style="margin-top: 16px">
+        Admin Login Password
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px">
+        <div class="form-group">
+          <label class="form-label">Password *</label>
+          <input type="password" class="form-control" ng-model="form.password" placeholder="Min 8 characters" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Confirm *</label>
+          <input type="password" class="form-control" ng-model="form.confirm_pw" placeholder="Repeat password" />
+        </div>
+      </div>
+
+      <button class="btn btn-primary btn-full" ng-click="register()" ng-disabled="loading || !form.org_name || !form.owner_name ||
+                           !form.email || !form.password || !phoneOk" style="margin-top: 20px">
+        <span ng-if="loading"><span class="spinner"></span></span>
+        <span ng-if="!loading">Register Organisation</span>
+      </button>
+
+      <div style="margin-top: 14px; text-align: center">
+        <span class="text-dim text-sm">Already registered?</span>
+        <a href="#/" class="text-sm" style="color: var(--olive-light); margin-left: 6px">Find your org →</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .form-section-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.9px;
+    color: var(--text-dim);
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+</style>

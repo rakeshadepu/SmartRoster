@@ -1,0 +1,107 @@
+<div class="app-layout">
+  <nav class="sidebar">
+    <div class="sidebar-brand"><div class="brand-mark"><div class="brand-icon"><i class="fa-solid fa-magnifying-glass"></i></div><div><div class="brand-name">Search Users</div><div class="brand-sub">Search</div></div></div></div>
+    <div class="sidebar-nav">
+      <div class="nav-section-label">Navigation</div>
+      <a class="nav-link" href="#/org/{{orgId}}/dashboard"><span class="nav-icon">←</span><span>Dashboard</span></a>
+      <a class="nav-link active" href="#/org/{{orgId}}/global-users"><span class="nav-icon"><i class="fa-solid fa-magnifying-glass"></i></span><span>Search Users</span></a>
+      <a class="nav-link" href="#/org/{{orgId}}/add-user"><span class="nav-icon">+</span><span>Add User</span></a>
+    </div>
+  </nav>
+
+  <div class="main-content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Global User Search</div>
+        <div class="page-sub">Search any registered user across all organisations by exact email or mobile number</div>
+      </div>
+    </div>
+
+    <div class="page-body">
+      <div style="max-width:560px">
+
+        <div class="card mb-16" style="margin-bottom:16px">
+          <div class="card-body">
+
+            <!-- <div class="alert alert-info" style="font-size:12px;margin-bottom:16px">
+              🔒 Search by <strong>exact</strong> email address or mobile number only.
+              Partial searches are not allowed. No user list is shown by default.
+            </div> -->
+
+            <div class="form-group">
+              <label class="form-label">Email address or mobile number</label>
+              <div class="flex gap-8">
+                <input type="text" class="form-control" ng-model="query"
+                       placeholder="user@email.com  or  17612345678"
+                       ng-keyup="$event.keyCode == 13 && search()"
+                       style="flex:1">
+                <button class="btn btn-primary" ng-click="search()" ng-disabled="loading || !query">
+                  <span ng-if="loading"><span class="spinner" style="width:14px;height:14px;border-width:2px"></span></span>
+                  <span ng-if="!loading">Search</span>
+                </button>
+                <button class="btn btn-secondary" ng-click="clear()" ng-if="result !== null || query">
+                  Clear
+                </button>
+              </div>
+            </div>
+
+            <div class="alert alert-error" ng-if="error" style="margin-top:8px">⚠ {{error}}</div>
+
+          </div>
+        </div>
+
+        <!-- Not found -->
+        <div class="alert alert-info" ng-if="result === false" style="margin-top:8px">
+          <i class="fa-solid fa-magnifying-glass"></i> {{message}}
+        </div>
+
+        <!-- Found -->
+        <div class="card" ng-if="result">
+          <div class="card-header">
+            <div class="card-title">User Found</div>
+            <span class="badge" ng-class="result.is_active ? 'badge-green' : 'badge-red'">
+              {{result.is_active ? 'Active' : 'Inactive'}}
+            </span>
+          </div>
+          <div class="card-body">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+
+              <div>
+                <div class="text-xs text-dim" style="text-transform:uppercase;letter-spacing:.7px;margin-bottom:3px">Name</div>
+                <div class="fw-600 text-cream">{{result.full_name}}</div>
+              </div>
+
+              <div>
+                <div class="text-xs text-dim" style="text-transform:uppercase;letter-spacing:.7px;margin-bottom:3px">Work Status</div>
+                <span class="badge" ng-class="workTypeBadge(result.work_status)">
+                  {{result.work_status || 'Not set'}}
+                </span>
+              </div>
+
+              <div>
+                <div class="text-xs text-dim" style="text-transform:uppercase;letter-spacing:.7px;margin-bottom:3px">Email</div>
+                <div class="text-sm">{{result.email || '—'}}</div>
+              </div>
+
+              <div>
+                <div class="text-xs text-dim" style="text-transform:uppercase;letter-spacing:.7px;margin-bottom:3px">Mobile</div>
+                <div class="text-sm mono">{{result.phone || '—'}}</div>
+              </div>
+
+              <div style="grid-column:1/-1">
+                <div class="text-xs text-dim" style="text-transform:uppercase;letter-spacing:.7px;margin-bottom:3px">Current Organisation</div>
+                <div ng-if="result.current_org" class="fw-600">
+                  {{result.current_org.name}}
+                  <span class="mono text-xs text-dim" style="margin-left:6px">{{result.current_org.org_id}}</span>
+                </div>
+                <div ng-if="!result.current_org" class="text-dim text-sm">Not assigned to any organisation</div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>

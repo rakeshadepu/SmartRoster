@@ -1,0 +1,199 @@
+<div class="app-layout">
+  <nav class="sidebar">
+    <div class="sidebar-brand"><div class="brand-mark"><div class="brand-icon">📅</div><div><div class="brand-name">Timetable</div><div class="brand-sub">Planner</div></div></div></div>
+    <div class="sidebar-user"><div class="user-name">{{user.full_name}}</div><div class="user-role">{{user.role}}</div><div class="user-id">{{user.user_id}}</div></div>
+    <div class="sidebar-nav">
+      <div class="nav-section-label">Management</div>
+      <a class="nav-link" href="#/org/{{orgId}}/u/{{userId}}/dashboard"><span class="nav-icon">⊞</span><span>Dashboard</span></a>
+      <a class="nav-link active" href="#/org/{{orgId}}/u/{{userId}}/manage"><span class="nav-icon">👥</span><span>Workers</span></a>
+      <a class="nav-link" href="#/org/{{orgId}}/u/{{userId}}/schedule"><span class="nav-icon">📋</span><span>Timetable</span></a>
+      <div class="nav-section-label" style="margin-top:8px">Organisation</div>
+      <a class="nav-link" href="#/org/{{orgId}}/u/{{userId}}/settings"><span class="nav-icon">⚙</span><span>Settings</span></a>
+    </div>
+    <div class="sidebar-footer"><button class="btn-logout" ng-click="logout()"><span>⎋</span><span>Sign out</span></button></div>
+  </nav>
+
+  <div class="main-content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Workers</div>
+        <div class="page-sub">Manage your team members</div>
+      </div>
+      <button class="btn btn-primary" ng-click="showCreateForm = !showCreateForm">
+        + Add Worker
+      </button>
+    </div>
+    <div class="page-body">
+
+      <div class="alert alert-error"   ng-if="error">⚠ {{error}}</div>
+      <div class="alert alert-success" ng-if="success">✓ {{success}}</div>
+
+      <!-- New worker credentials (shown once) -->
+      <div class="password-reveal" ng-if="createdCred">
+        <h4>⚠ Save these credentials — the password will NOT be shown again</h4>
+        <div class="credential-row">
+          <div><div class="credential-label">Worker</div><div class="credential-value">{{createdCred.name}}</div></div>
+        </div>
+        <div class="credential-row">
+          <div><div class="credential-label">User ID</div><div class="credential-value mono">{{createdCred.user_id}}</div></div>
+          <button class="credential-copy" ng-click="copyText(createdCred.user_id, $event)">Copy</button>
+        </div>
+        <div class="credential-row">
+          <div><div class="credential-label">Password</div><div class="credential-value mono">{{createdCred.password}}</div></div>
+          <button class="credential-copy" ng-click="copyText(createdCred.password, $event)">Copy</button>
+        </div>
+        <div class="credential-row">
+          <div><div class="credential-label">Join URL</div><div class="credential-value mono">{{createdCred.join_url}}</div></div>
+          <button class="credential-copy" ng-click="copyText(createdCred.join_url, $event)">Copy</button>
+        </div>
+        <button class="btn btn-sm btn-secondary mt-8" ng-click="createdCred = null">Dismiss</button>
+      </div>
+
+      <!-- Create form -->
+      <div class="card mb-24" ng-if="showCreateForm" style="margin-bottom:20px">
+        <div class="card-header">
+          <div class="card-title">New Worker</div>
+          <button class="btn btn-sm btn-secondary" ng-click="showCreateForm = false">Cancel</button>
+        </div>
+        <div class="card-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Full Name</label>
+              <input type="text" class="form-control" ng-model="newWorker.full_name" placeholder="e.g. Maria Schmidt">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Work Type</label>
+              <select class="form-control" ng-model="newWorker.work_type">
+                <option value="FULL_TIME">Full Time (40h)</option>
+                <option value="PART_TIME">Part Time (20h)</option>
+                <option value="MINIJOB">Mini Job (10h)</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn btn-primary" ng-click="createWorker()" ng-disabled="creating || !newWorker.full_name">
+            <span ng-if="creating"><span class="spinner"></span></span>
+            <span ng-if="!creating">Create Worker</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Filter bar -->
+      <div class="flex gap-8 mb-16 flex-wrap items-center">
+        <span class="text-dim text-sm">Filter:</span>
+        <select class="form-control" ng-model="filter.work_type" ng-change="applyFilter()" style="width:160px">
+          <option value="">All types</option>
+          <option value="FULL_TIME">Full Time</option>
+          <option value="PART_TIME">Part Time</option>
+          <option value="MINIJOB">Mini Job</option>
+        </select>
+        <select class="form-control" ng-model="filter.is_active" ng-change="applyFilter()" style="width:130px">
+          <option value="">All status</option>
+          <option value="true">Active</option>
+          <option value="false">Inactive</option>
+        </select>
+      </div>
+
+      <!-- Workers table -->
+      <div class="card">
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr>
+              <th>Name</th>
+              <th>User ID</th>
+              <th>Work Type</th>
+              <th>Hours/Wk</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr></thead>
+            <tbody>
+              <tr ng-if="loading"><td colspan="6" class="text-dim"><span class="spinner"></span> Loading…</td></tr>
+              <tr ng-if="!loading && workers.length === 0">
+                <td colspan="6" class="text-dim text-sm">No workers found.</td>
+              </tr>
+              <tr ng-repeat="w in workers">
+                <td class="fw-600 text-cream">{{w.full_name}}</td>
+                <td class="mono text-sm text-dim">{{w.user_id}}</td>
+                <td><span class="badge" ng-class="workTypeBadge(w.work_type)">{{w.work_type.replace('_',' ')}}</span></td>
+                <td class="text-dim">{{w.weekly_hours}}h</td>
+                <td>
+                  <span class="badge" ng-class="w.is_active ? 'badge-green' : 'badge-red'">
+                    {{w.is_active ? 'Active' : 'Inactive'}}
+                  </span>
+                </td>
+                <td>
+                  <div class="td-actions">
+                    <button class="btn btn-sm btn-secondary btn-icon" ng-click="openEdit(w)" title="Edit">✎</button>
+                    <button class="btn btn-sm btn-secondary btn-icon" ng-click="resetPassword(w)" title="Reset password">🔑</button>
+                    <button class="btn btn-sm btn-danger btn-icon" ng-click="deactivate(w)" ng-if="w.is_active" title="Deactivate">✕</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Edit modal -->
+<div class="modal-overlay" ng-if="editModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Edit Worker</div>
+      <button class="modal-close" ng-click="editModal = false">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Full Name</label>
+        <input type="text" class="form-control" ng-model="editWorker.full_name">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Work Type</label>
+        <select class="form-control" ng-model="editWorker.work_type">
+          <option value="FULL_TIME">Full Time (40h)</option>
+          <option value="PART_TIME">Part Time (20h)</option>
+          <option value="MINIJOB">Mini Job (10h)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Status</label>
+        <select class="form-control" ng-model="editWorker.is_active">
+          <option ng-value="true">Active</option>
+          <option ng-value="false">Inactive</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" ng-click="editModal = false">Cancel</button>
+      <button class="btn btn-primary" ng-click="saveEdit()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Reset password modal -->
+<div class="modal-overlay" ng-if="resetModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">New Password</div>
+      <button class="modal-close" ng-click="resetModal = false">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-warn" style="margin-bottom:16px">
+        ⚠ Save this password — it will NOT be shown again.
+      </div>
+      <div class="credential-row">
+        <div><div class="credential-label">User ID</div><div class="credential-value mono">{{resetCred.user_id}}</div></div>
+        <button class="credential-copy" ng-click="copyText(resetCred.user_id, $event)">Copy</button>
+      </div>
+      <div class="credential-row">
+        <div><div class="credential-label">New Password</div><div class="credential-value mono">{{resetCred.password}}</div></div>
+        <button class="credential-copy" ng-click="copyText(resetCred.password, $event)">Copy</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" ng-click="resetModal = false">Done</button>
+    </div>
+  </div>
+</div>

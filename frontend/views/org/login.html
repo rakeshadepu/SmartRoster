@@ -1,0 +1,52 @@
+<div class="login-page">
+  <div class="login-card">
+
+    <div class="login-brand">
+      <div class="login-icon"><i class="fa-solid fa-timeline"></i></div>
+      <div class="login-title" ng-if="org">{{org.name}}</div>
+      <div class="login-title" ng-if="!org">Organisation Login</div>
+      <div class="login-sub" ng-if="org">Shop {{org.shop_open}} – {{org.shop_close}}</div>
+      <div class="login-sub" ng-if="!org">Sign in to manage your team</div>
+      <div class="mono text-xs text-dim" style="margin-top:4px" ng-if="orgId">Org. Id: {{orgId}}</div>
+    </div>
+
+    <div class="alert alert-error" ng-if="error">⚠ {{error}}</div>
+
+    <div class="form-group">
+      <!-- Dynamic label based on what user is typing -->
+      <label class="form-label">
+        <span ng-if="!identifierType()">Email address or Org ID</span>
+        <span ng-if="identifierType() === 'email'" style="color:var(--olive-light)">✓ Email address</span>
+        <span ng-if="identifierType() === 'orgid'" style="color:var(--olive-light)">✓ Org ID</span>
+        <span ng-if="identifierType() === 'typing'" style="color:var(--accent)">Org ID ({{form.identifier.length}}/8
+          chars)</span>
+      </label>
+      <input type="text" class="form-control" ng-model="form.identifier" placeholder="admin@company.com  or  aB3-xY7_"
+        ng-keyup="$event.keyCode == 13 && login()" autocomplete="username" autofocus>
+      <div class="form-hint" style="margin-top:5px">
+        Enter your <strong>email address</strong> or your <strong>8-character org ID</strong>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Password</label>
+      <input type="password" class="form-control" ng-model="form.password" placeholder="Your organisation password"
+        ng-keyup="$event.keyCode == 13 && login()" autocomplete="current-password">
+    </div>
+
+    <button class="btn btn-primary btn-full" ng-click="login()"
+      ng-disabled="loading || !form.identifier || !form.password" style="margin-top:4px">
+      <span ng-if="loading"><span class="spinner"></span></span>
+      <span ng-if="!loading">Sign In</span>
+    </button>
+
+    <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px;text-align:center">
+      <a href="#/org/register" class="text-sm" style="color:var(--olive-light)">
+        Register new organisation →
+      </a>
+      <br>
+      <a href="#/" class="text-xs text-dim" style="margin-top:6px;display:inline-block">← Home</a>
+    </div>
+
+  </div>
+</div>

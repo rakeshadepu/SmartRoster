@@ -1,0 +1,96 @@
+<div class="app-layout">
+  <nav class="sidebar">
+    <div class="sidebar-brand"><div class="brand-mark"><div class="brand-icon">📅</div><div><div class="brand-name">Timetable</div><div class="brand-sub">Planner</div></div></div></div>
+    <div class="sidebar-user"><div class="user-name">{{user.full_name}}</div><div class="user-role">{{user.role}}</div><div class="user-id">{{user.user_id}}</div></div>
+    <div class="sidebar-nav">
+      <div class="nav-section-label">Management</div>
+      <a class="nav-link" href="#/org/{{orgId}}/u/{{userId}}/dashboard"><span class="nav-icon">⊞</span><span>Dashboard</span></a>
+      <a class="nav-link" href="#/org/{{orgId}}/u/{{userId}}/manage"><span class="nav-icon">👥</span><span>Workers</span></a>
+      <a class="nav-link" href="#/org/{{orgId}}/u/{{userId}}/schedule"><span class="nav-icon">📋</span><span>Timetable</span></a>
+      <div class="nav-section-label" style="margin-top:8px">Organisation</div>
+      <a class="nav-link active" href="#/org/{{orgId}}/u/{{userId}}/settings"><span class="nav-icon">⚙</span><span>Settings</span></a>
+    </div>
+    <div class="sidebar-footer"><button class="btn-logout" ng-click="logout()"><span>⎋</span><span>Sign out</span></button></div>
+  </nav>
+
+  <div class="main-content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Settings</div>
+        <div class="page-sub">Shop hours and work type limits</div>
+      </div>
+    </div>
+    <div class="page-body">
+      <div ng-if="loading" class="text-dim flex items-center gap-8"><span class="spinner"></span> Loading…</div>
+
+      <div class="alert alert-error"   ng-if="error">⚠ {{error}}</div>
+      <div class="alert alert-success" ng-if="success">✓ {{success}}</div>
+
+      <div class="grid-2" ng-if="!loading">
+
+        <!-- Shop hours -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">🏪 Shop Hours</div>
+          </div>
+          <div class="card-body">
+            <div class="alert alert-info" style="margin-bottom:16px; font-size:12px">
+              The scheduler will only assign shifts within these hours.
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Opening Time</label>
+                <input type="time" class="form-control" ng-model="shopForm.shop_open">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Closing Time</label>
+                <input type="time" class="form-control" ng-model="shopForm.shop_close">
+              </div>
+            </div>
+            <button class="btn btn-primary mt-8" ng-click="saveShopHours()" ng-disabled="saving">
+              <span ng-if="saving"><span class="spinner"></span></span>
+              <span ng-if="!saving">Save Hours</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Work type limits -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">⏱ Weekly Hour Limits</div>
+          </div>
+          <div class="card-body">
+            <div class="alert alert-info" style="margin-bottom:16px; font-size:12px">
+              Maximum hours per week assigned to each employment type.
+            </div>
+
+            <div ng-repeat="type in ['FULL_TIME', 'PART_TIME', 'MINIJOB']">
+              <div class="form-group">
+                <label class="form-label">
+                  <span ng-if="type === 'FULL_TIME'">Full Time</span>
+                  <span ng-if="type === 'PART_TIME'">Part Time</span>
+                  <span ng-if="type === 'MINIJOB'">Mini Job</span>
+                  — hours/week
+                </label>
+                <div class="flex gap-8 items-center">
+                  <input type="number" class="form-control" ng-model="limitsForm[type]"
+                         min="1" max="60" style="width:100px">
+                  <button class="btn btn-sm btn-secondary" ng-click="saveLimit(type)">
+                    Save
+                  </button>
+                  <span class="badge"
+                    ng-class="type === 'FULL_TIME' ? 'badge-green' : type === 'PART_TIME' ? 'badge-blue' : 'badge-amber'">
+                    {{type.replace('_',' ')}}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div><!-- /grid-2 -->
+
+    </div>
+  </div>
+</div>

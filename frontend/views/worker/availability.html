@@ -1,0 +1,86 @@
+<div class="app-layout">
+  <nav class="sidebar">
+    <div class="sidebar-brand"><div class="brand-mark"><div class="brand-icon">📅</div><div><div class="brand-name">Timetable</div><div class="brand-sub">Planner</div></div></div></div>
+    <div class="sidebar-user"><div class="user-name">{{user.full_name}}</div><div class="user-role">{{user.role}}</div><div class="user-id">{{user.user_id}}</div></div>
+    <div class="sidebar-nav">
+      <div class="nav-section-label">My Schedule</div>
+      <a class="nav-link " href="#/org/{{orgId}}/u/{{userId}}/dashboard"><span class="nav-icon">⊞</span><span>Dashboard</span></a>
+      <a class="nav-link active" href="#/org/{{orgId}}/u/{{userId}}/availability"><span class="nav-icon">✓</span><span>My Availability</span></a>
+      <a class="nav-link " href="#/org/{{orgId}}/u/{{userId}}/timetable"><span class="nav-icon">📋</span><span>My Timetable</span></a>
+    </div>
+    <div class="sidebar-footer"><button class="btn-logout" ng-click="logout()"><span>⎋</span><span>Sign out</span></button></div>
+  </nav>
+
+  <div class="main-content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">My Availability</div>
+        <div class="page-sub">Tell us when you can work next week — submit by Saturday</div>
+      </div>
+    </div>
+    <div class="page-body">
+
+      <div class="alert alert-error"   ng-if="error">⚠ {{error}}</div>
+      <div class="alert alert-success" ng-if="success">✓ {{success}}</div>
+
+      <div class="card" style="max-width:580px">
+        <div class="card-header">
+          <div class="card-title">Week Starting</div>
+          <div class="flex gap-8 items-center">
+            <input type="date" class="form-control" ng-model="weekStart"
+                   ng-change="changeWeek()" style="width:160px">
+          </div>
+        </div>
+        <div class="card-body">
+
+          <div class="alert alert-info" style="margin-bottom:20px; font-size:12px">
+            Check the days you are available and set your preferred start time for each.
+            Only employees can modify submissions after you save.
+          </div>
+
+          <!-- Day slots -->
+          <div ng-repeat="slot in slots"
+               style="padding:14px; border:1px solid var(--border); border-radius:var(--radius);
+                      margin-bottom:10px; transition:all .15s"
+               ng-style="{ background: slot.checked ? 'rgba(107,143,78,0.08)' : 'transparent',
+                           borderColor: slot.checked ? 'var(--olive-dim)' : 'var(--border)' }">
+            <div class="flex items-center justify-between">
+              <div class="flex gap-12 items-center">
+                <input type="checkbox" ng-model="slot.checked"
+                       style="width:18px;height:18px;accent-color:var(--olive);cursor:pointer">
+                <div>
+                  <div class="fw-600 text-cream">{{slot.label}}</div>
+                  <div class="text-xs text-dim" ng-if="!slot.checked">Not available</div>
+                  <div class="text-xs text-green" ng-if="slot.checked">Available</div>
+                </div>
+              </div>
+              <div ng-if="slot.checked" class="flex gap-8 items-center">
+                <label class="text-xs text-dim">Start:</label>
+                <input type="time" class="form-control" ng-model="slot.start_time"
+                       style="width:110px">
+              </div>
+            </div>
+          </div>
+
+          <!-- Existing submissions notice -->
+          <div class="alert alert-warn" ng-if="existing.length > 0" style="margin-top:12px;font-size:12px">
+            You have {{existing.length}} existing submission(s) for this week.
+            Saving will replace them.
+          </div>
+
+          <div class="flex gap-8 mt-16">
+            <button class="btn btn-primary" ng-click="submit()" ng-disabled="loading">
+              <span ng-if="loading"><span class="spinner"></span></span>
+              <span ng-if="!loading">Save Availability</span>
+            </button>
+            <button class="btn btn-secondary" ng-click="slots.forEach(function(s){ s.checked=false; })">
+              Clear All
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>

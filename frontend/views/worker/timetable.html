@@ -1,0 +1,140 @@
+<div class="app-layout">
+  <nav class="sidebar">
+    <div class="sidebar-brand"><div class="brand-mark"><div class="brand-icon">📅</div><div><div class="brand-name">Timetable</div><div class="brand-sub">Planner</div></div></div></div>
+    <div class="sidebar-user"><div class="user-name">{{user.full_name}}</div><div class="user-role">{{user.role}}</div><div class="user-id">{{user.user_id}}</div></div>
+    <div class="sidebar-nav">
+      <div class="nav-section-label">My Schedule</div>
+      <a class="nav-link " href="#/org/{{orgId}}/u/{{userId}}/dashboard"><span class="nav-icon">⊞</span><span>Dashboard</span></a>
+      <a class="nav-link " href="#/org/{{orgId}}/u/{{userId}}/availability"><span class="nav-icon">✓</span><span>My Availability</span></a>
+      <a class="nav-link active" href="#/org/{{orgId}}/u/{{userId}}/timetable"><span class="nav-icon">📋</span><span>My Timetable</span></a>
+    </div>
+    <div class="sidebar-footer"><button class="btn-logout" ng-click="logout()"><span>⎋</span><span>Sign out</span></button></div>
+  </nav>
+
+  <div class="main-content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">My Timetable</div>
+        <div class="page-sub">View-only — contact your manager for changes</div>
+      </div>
+      <button class="btn btn-accent" ng-click="downloadPdf()" ng-if="selected">⬇ Download PDF</button>
+    </div>
+    <div class="page-body">
+      <div ng-if="loading" class="text-dim flex items-center gap-8"><span class="spinner"></span> Loading…</div>
+      <div class="alert alert-error" ng-if="error">⚠ {{error}}</div>
+
+      <!-- No published timetables -->
+      <div class="alert alert-info" ng-if="!loading && timetables.length === 0">
+        No published timetables yet. Your manager will publish one soon.
+      </div>
+
+      <div class="flex gap-16" ng-if="!loading && timetables.length > 0" style="align-items:flex-start">
+
+        <!-- Week selector -->
+        <div style="width:200px;flex-shrink:0">
+          <div class="card">
+            <div class="card-header"><div class="card-title">Weeks</div></div>
+            <div ng-repeat="tt in timetables"
+                 ng-click="selectTimetable(tt)"
+                 style="padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s"
+                 ng-style="{ background: selected && selected.id === tt.id ? 'var(--surface2)' : '' }"
+                 onmouseover="this.style.background='var(--surface2)'"
+                 onmouseout="this.style.background=''">
+              <div class="fw-600 text-cream text-sm">{{tt.week_start}}</div>
+              <div class="text-xs text-dim mt-4">Published</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Detail -->
+        <div style="flex:1;min-width:0" ng-if="selected">
+
+          <!-- Header summary -->
+          <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px">
+            <div class="stat-card">
+              <div class="stat-label">Week</div>
+              <div class="stat-value" style="font-size:15px">{{weekStart}}</div>
+              <div class="stat-sub">to {{weekEnd}}</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">My Hours</div>
+              <div class="stat-value stat-accent">{{totalHours}}</div>
+              <div class="stat-sub">of {{weekBudget}}h budget</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Utilisation</div>
+              <div class="stat-value" style="font-size:18px">{{utilisationPct()}}%</div>
+              <div style="background:var(--border);border-radius:3px;height:4px;margin-top:8px">
+                <div style="height:4px;border-radius:3px;background:var(--olive);width:{{utilisationPct()}}%"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Week grid (personal) -->
+          <div class="card">
+            <div class="card-header"><div class="card-title">Weekly Schedule</div></div>
+            <div class="tt-grid">
+              <table class="tt-table">
+                <thead>
+                  <tr>
+                    <th ng-repeat="d in days">{{dayLabel(d)}}</th>
+                    <th>Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td ng-repeat="d in days">
+                      <div ng-init="shift = shiftForDay(d)">
+                        <div ng-if="shift" class="tt-shift">
+                          <div class="tt-shift-time">{{shift.start_time.slice(0,5)}}</div>
+                          <div class="tt-shift-time">{{shift.end_time.slice(0,5)}}</div>
+                          <div class="tt-shift-hrs">{{shift.hours}}h</div>
+                        </div>
+                        <div ng-if="!shift" class="tt-off">–</div>
+                      </div>
+                    </td>
+                    <td class="tt-total">{{totalHours}}h</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Shift detail list -->
+            <div style="padding:16px;border-top:1px solid var(--border)" ng-if="myShifts.length > 0">
+              <div class="text-xs text-dim fw-600" style="text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px">Shift Details</div>
+              <div ng-repeat="s in myShifts"
+                   style="display:flex;align-items:center;gap:16px;padding:10px 0;border-bottom:1px solid var(--border)"
+                   ng-if="$last" style="border-bottom:none">
+                <div style="width:100px" class="fw-600 text-cream">{{s.day_display}}</div>
+                <div class="flex gap-8 items-center">
+                  <span class="badge badge-green">{{s.start_time.slice(0,5)}}</span>
+                  <span class="text-dim">→</span>
+                  <span class="badge badge-green">{{s.end_time.slice(0,5)}}</span>
+                </div>
+                <div class="text-dim text-sm">{{s.hours}}h</div>
+              </div>
+              <!-- Fix — show all rows without ng-if conflict -->
+              <div ng-repeat="s in myShifts"
+                   style="display:flex;align-items:center;gap:16px;padding:10px 0;
+                          border-bottom:1px solid var(--border);">
+                <div style="width:100px" class="fw-600 text-cream">{{s.day_display}}</div>
+                <div class="flex gap-8 items-center">
+                  <span class="badge badge-green">{{s.start_time.slice(0,5)}}</span>
+                  <span class="text-dim">→</span>
+                  <span class="badge badge-green">{{s.end_time.slice(0,5)}}</span>
+                </div>
+                <div class="text-sm text-dim">{{s.hours}}h</div>
+              </div>
+            </div>
+
+            <div class="card-body text-dim text-sm" ng-if="myShifts.length === 0">
+              You have no shifts scheduled this week.
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
