@@ -23,10 +23,10 @@
       </div>
 
       <!-- Two-column layout: left list, right detail -->
-      <div class="flex gap-16" style="align-items:flex-start">
+      <div class="timetable-layout flex gap-16" style="align-items:flex-start">
 
         <!-- Left: Generate + list -->
-        <div style="width:260px; flex-shrink:0">
+        <div class="tt-sidebar">
 
           <!-- Generate card -->
           <div class="card mb-16" style="margin-bottom:14px">
@@ -192,3 +192,36 @@
     </div>
   </div>
 </div>
+
+<style>
+  .timetable-layout {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.tt-sidebar {
+  width: 260px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 1080px) {
+  .timetable-layout {
+    flex-direction: column;
+  }
+
+  .timetable-layout > div:first-child {
+    width: 100% !important;
+  }
+
+  .timetable-layout > div:nth-child(2) {
+    width: 100%;
+  }
+  .tt-sidebar {
+    width: 100%;
+  }
+}
+
+
+
+</style>

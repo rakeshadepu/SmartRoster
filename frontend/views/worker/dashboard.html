@@ -1,36 +1,12 @@
 <div class="app-layout">
-  <nav class="sidebar">
-    <div class="sidebar-brand">
-      <div class="brand-mark">
-        <div class="brand-icon">📅</div>
-        <div>
-          <div class="brand-name">Timetable</div>
-          <div class="brand-sub">Planner</div>
-        </div>
-      </div>
-    </div>
-    <div class="sidebar-user">
-      <div class="user-name">{{user.full_name}}</div>
-      <div class="user-role">{{user.work_type}}</div>
-      <div class="user-id">{{user.user_id}}</div>
-    </div>
-    <div class="sidebar-nav">
-      <div class="nav-section-label">My Schedule</div>
-      <a class="nav-link active" href="#/org/{{orgId}}/u/{{userId}}/dashboard"><span
-          class="nav-icon">⊞</span><span>Dashboard</span></a>
-      <a class="nav-link" href="#/org/{{orgId}}/u/{{userId}}/availability"><span class="nav-icon">✓</span><span>My
-          Availability</span></a>
-      <a class="nav-link" href="#/org/{{orgId}}/u/{{userId}}/timetable"><span class="nav-icon">📋</span><span>My
-          Timetable</span></a>
-    </div>
-    <div class="sidebar-footer"><button class="btn-logout" ng-click="logout()"><span>⎋</span><span>Sign
-          out</span></button></div>
-  </nav>
+  <!-- Sidebar -->
+  <nav class="sidebar" ng-include="'views/worker/templates/sidebar.html'"></nav>
 
   <div class="main-content">
     <div class="page-header">
       <div>
-        <div class="page-title">Welcome, {{user.full_name}}</div>
+        <div class="page-title"><i class="fa-solid fa-house"></i>
+          Welcome, {{user.full_name}}</div>
         <div class="page-sub">{{user.work_type}}&nbsp;·&nbsp;{{user.weekly_hours}}h/week budget</div>
       </div>
     </div>
@@ -38,12 +14,12 @@
       <div ng-if="loading" class="text-dim flex items-center gap-8"><span class="spinner"></span> Loading…</div>
       <div class="stats-grid" ng-if="!loading">
         <div class="stat-card">
-          <div class="stat-label">Hours This Week</div>
+          <div class="stat-label"><i class="fa-solid fa-clock"></i>Hours This Week</div>
           <div class="stat-value stat-accent">{{totalHours}}</div>
-          <div class="stat-sub">of {{user.weekly_hours}}h budget</div>
+          <div class="stat-sub">of {{user.weekly_hours}}h</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Shifts This Week</div>
+          <div class="stat-label"><i class="fa-solid fa-calendar-days"></i> Shifts This Week</div>
           <div class="stat-value">{{myShifts.length}}</div>
           <div class="stat-sub">scheduled days</div>
         </div>
@@ -55,8 +31,11 @@
       </div>
       <div class="card" ng-if="!loading">
         <div class="card-header">
-          <div class="card-title">My Shifts This Week</div>
-          <a href="#/org/{{orgId}}/u/{{userId}}/timetable" class="btn btn-sm btn-secondary">Full Timetable</a>
+          <div class="card-title"><i class="fa-solid fa-clipboard-list"></i>
+            My Shifts This Week</div>
+          <a href="#/org/{{orgId}}/u/{{userId}}/timetable" class="btn btn-sm btn-secondary"><i
+              class="fa-solid fa-table-list"></i>
+            Full Timetable</a>
         </div>
         <div ng-if="myShifts.length===0" class="card-body text-dim text-sm">No shifts yet. Check back after the
           timetable is published.</div>
@@ -82,9 +61,12 @@
         </div>
       </div>
       <div class="alert alert-info" style="margin-top:16px">
-        📌 Submit your availability for next week by <strong>Saturday</strong>.
+        <i class="fa-solid fa-thumbtack"></i>
+        Submit your availability for next week by <strong>Saturday</strong>.
         <a href="#/org/{{orgId}}/u/{{userId}}/availability"
-          style="color:inherit;margin-left:6px;text-decoration:underline">Submit now →</a>
+          style="color:inherit;margin-left:6px;text-decoration:underline">
+          Submit now <i class="fa-solid fa-arrow-right"></i>
+        </a>
       </div>
     </div>
   </div>

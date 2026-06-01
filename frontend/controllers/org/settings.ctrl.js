@@ -22,17 +22,29 @@ function($scope, $routeParams, AuthService, ApiService) {
   $scope.success    = null;
   $scope.shopForm   = { shop_open: '', shop_close: '' };
   $scope.limitsForm = { FULL_TIME: 40, PART_TIME: 20, MINIJOB: 10 };
+  $scope.settingsForm = {
+    name: "",
+    email: "",
+    password: "",
+    confirm_pw: "",
+  };
 
   function load() {
     ApiService.getOrg(orgId).then(function(res) {
       $scope.org = res.data.organisation;
       $scope.shopForm.shop_open  = ($scope.org.shop_open  || '').slice(0, 5);
       $scope.shopForm.shop_close = ($scope.org.shop_close || '').slice(0, 5);
+      $scope.settingsForm.name = $scope.org.name || "";
+
+      $scope.settingsForm.email = $scope.org.email || "";
+
+      AuthService.saveOrgSession(AuthService.getOrgToken(), $scope.org);
     });
+    
     ApiService.getLimits().then(function(res) {
       $scope.limits = res.data.limits || [];
       $scope.limits.forEach(function(l) { $scope.limitsForm[l.work_type] = l.hours_per_week; });
-    }).finally(function() { $scope.loading = false; });
+    }).finally(function () { $scope.loading = false; });
   }
 
   load();
@@ -51,6 +63,42 @@ function($scope, $routeParams, AuthService, ApiService) {
       $scope.saving = false;
       setTimeout(function() { $scope.$apply(function() { $scope.success = null; }); }, 3000);
     });
+  };
+
+  $scope.saveSettings = function () {
+    $scope.error = null;
+
+    const payload = {
+      name: $scope.settingsForm.name,
+      email: $scope.settingsForm.email,
+    };
+
+    if ($scope.settingsForm.password) {
+      if ($scope.settingsForm.password !== $scope.settingsForm.confirm_pw) {
+        $scope.error = "Passwords do not match.";
+        return;
+      }
+
+      payload.password = $scope.settingsForm.password;
+    }
+
+    ApiService.updateOrg(orgId, payload)
+      .then(function (res) {
+        $scope.org = res.data.organisation;
+
+        AuthService.saveOrgSession(AuthService.getOrgToken(), $scope.org);
+
+        $scope.success = "Organisation settings updated.";
+
+        $scope.settingsForm.password = "";
+        $scope.settingsForm.confirm_pw = "";
+      })
+      .catch(function (err) {
+        $scope.error =
+          err.data && err.data.error
+            ? err.data.error
+            : "Failed to save settings.";
+      });
   };
 
   $scope.saveLimit = function(workType) {

@@ -34,12 +34,12 @@ from timetable_app.serializers import (
     TimetableSerializer,
     ShiftSerializer,
 )
+
 from timetable_app.permissions import (
     IsWorker,
     IsOrgAdmin,
     IsSameOrgWorker,
     IsOwnerWorkerOrOrgAdmin,
-    IsWorker,
     IsOrgAdminOrWorker,
     IsOrgAdminOrEmployee,
     IsOrgAdminOrReadOnly,
@@ -68,6 +68,22 @@ def _get_org_from_request(request):
         return request.user.org
     return None
 
+def _validate_org(request, org_id):
+    org = _get_org_from_request(request)
+
+    if not org:
+        return None, Response(
+            {'error': 'Organisation not found.'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    if org.org_id != org_id:
+        return None, Response(
+            {'error': 'Organisation mismatch.'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    return org, None
 
 # ===========================================================================
 # AUTH VIEWS
@@ -176,7 +192,7 @@ class OrganisationView(APIView):
     PATCH /api/org/<org_id>/settings/ → Org admin / Employee updates shop open/close times
     org_id URL kwarg is used to verify the token belongs to this org.
     """
-    permission_classes = [IsOrgAdminOrEmployee]
+    permission_classes = [IsOrgAdmin]
 
     def _get_org(self, request, org_id):
         org = _get_org_from_request(request)
@@ -220,10 +236,13 @@ class WorkTypeLimitListView(APIView):
     GET  /api/work-limits/  → list all hour limits for this org
     POST /api/work-limits/  → create/override a limit for a work type
     """
-    permission_classes = [IsOrgAdminOrEmployee]
+    
+    permission_classes = [IsOrgAdmin]
 
     def get(self, request):
-        org = request.user.org
+        print("USER:", request.user)
+        print("ORG:", getattr(request, "org", None))
+        org = request.org
         if not org:
             return Response({'error': 'No organisation assigned.'},
                             status=status.HTTP_404_NOT_FOUND)
@@ -232,7 +251,7 @@ class WorkTypeLimitListView(APIView):
         return Response({'success': True, 'limits': serializer.data})
 
     def post(self, request):
-        org = request.user.org
+        org = request.org
         data = {**request.data, 'org': org.id}
         # Upsert: update if exists, create if not
         work_type = data.get('work_type')
@@ -281,16 +300,22 @@ class WorkerListCreateView(APIView):
     The employee must copy this and hand it to the worker.
     After this response, plain_password is cleared from the DB.
     """
-    permission_classes = [IsOrgAdminOrEmployee]
+    permission_classes = [IsOrgAdmin]
 
     def get(self, request, org_id):
-        org = request.user.org
+        org = request.org
         # Verify the URL org_id matches the authenticated employee's org
         if not org or org.org_id != org_id:
             return Response({'error': 'Organisation mismatch or not found.'},
                             status=status.HTTP_403_FORBIDDEN)
 
+        print("REQUEST ORG:", org)
+        print("ORG ID URL:", org_id)
+
         qs = User.objects.filter(org=org, role=User.Role.WORKER)
+
+        print("TOTAL WORKERS:", User.objects.filter(role=User.Role.WORKER).count())
+        print("ORG WORKERS:", qs.count())
 
         # Optional filters
         work_type = request.query_params.get('work_type')
@@ -308,7 +333,11 @@ class WorkerListCreateView(APIView):
         })
 
     def post(self, request, org_id):
-        org = request.user.org
+        org, error = _validate_org(request, org_id)
+
+        if error:
+            return error
+            
         if not org or org.org_id != org_id:
             return Response({'error': 'Organisation mismatch or not found.'},
                             status=status.HTTP_403_FORBIDDEN)
@@ -347,9 +376,13 @@ class WorkerDetailView(APIView):
     PATCH  /api/org/<org_id>/<user_id>/  → update worker (work_type, is_active, full_name)
     DELETE /api/org/<org_id>/<user_id>/  → deactivate (soft delete) worker
     """
-    permission_classes = [IsOrgAdminOrEmployee]
+    permission_classes = [IsOrgAdmin]
 
     def _get_worker(self, org_id, user_id, employee):
+        org = _get_org_from_request(request)
+
+        if not org:
+            return None
         try:
             return User.objects.get(
                 user_id=user_id,
@@ -523,11 +556,6 @@ class AvailabilityDetailView(APIView):
             {'error': 'Workers cannot delete availability records.'},
             status=status.HTTP_403_FORBIDDEN,
         )
-        obj = self._get_object(pk, request.user)
-        if not obj:
-            return Response({'error': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
-        obj.delete()
-        return Response({'success': True, 'message': 'Availability record deleted.'})
 
 
 # ===========================================================================
@@ -605,7 +633,7 @@ class TimetableGenerateView(APIView):
 
     Returns the generated timetable with all shifts and a summary.
     """
-    permission_classes = [IsOrgAdminOrEmployee]
+    permission_classes = [IsOrgAdmin]
 
     def post(self, request):
         from timetable_app.scheduler import generate_timetable
@@ -655,7 +683,7 @@ class TimetablePublishView(APIView):
     Employee publishes a DRAFT timetable, making it visible to workers.
     Cannot un-publish — contact admin to revert.
     """
-    permission_classes = [IsOrgAdminOrEmployee]
+    permission_classes = [IsOrgAdmin]
 
     def post(self, request, pk):
         try:
@@ -690,7 +718,7 @@ class TimetableShiftEditView(APIView):
       - shift duration <= 8 hours
       - worker weekly total still within budget after edit
     """
-    permission_classes = [IsOrgAdminOrEmployee]
+    permission_classes = [IsOrgAdmin]
 
     def patch(self, request, pk, shift_pk):
         import datetime
@@ -779,7 +807,7 @@ class TimetableShiftDeleteView(APIView):
 
     Employee removes an individual shift from a timetable.
     """
-    permission_classes = [IsOrgAdminOrEmployee]
+    permission_classes = [IsOrgAdmin]
 
     def delete(self, request, pk, shift_pk):
         try:
@@ -1132,173 +1160,6 @@ class OrgMeView(APIView):
             'success'      : True,
             'organisation' : OrgDetailSerializer(org, context={'request': request}).data,
             'employees'    : WorkerListSerializer(employees, many=True).data,
-        })
-
-
-class OrgUpdateView(APIView):
-    """PATCH /api/org/<org_id>/update/  — Org-Token required"""
-    from timetable_app.permissions import IsOrgAdmin
-    permission_classes = [IsOrgAdmin]
-
-    def patch(self, request, org_id):
-        from timetable_app.serializers import OrgDetailSerializer
-        org  = request.org
-        if org.org_id != org_id:
-            return Response({'error': 'Token does not match this organisation.'},
-                            status=status.HTTP_403_FORBIDDEN)
-        data = request.data
-
-        if 'name' in data:
-            name = data['name'].strip()
-            if Organisation.objects.filter(name__iexact=name).exclude(pk=org.pk).exists():
-                return Response({'error': 'Organisation name already taken.'},
-                                status=status.HTTP_400_BAD_REQUEST)
-            org.name = name
-        if 'shop_open'  in data: org.shop_open  = data['shop_open']
-        if 'shop_close' in data: org.shop_close = data['shop_close']
-        if str(org.shop_open) >= str(org.shop_close):
-            return Response({'error': 'shop_open must be earlier than shop_close.'},
-                            status=status.HTTP_400_BAD_REQUEST)
-        if 'email' in data:
-            email = data['email'].lower()
-            if Organisation.objects.filter(email=email).exclude(pk=org.pk).exists():
-                return Response({'error': 'Email already in use.'}, status=status.HTTP_400_BAD_REQUEST)
-            org.email = email
-        if 'password' in data:
-            if len(data['password']) < 8:
-                return Response({'error': 'Password must be at least 8 characters.'},
-                                status=status.HTTP_400_BAD_REQUEST)
-            org.set_password(data['password'])
-
-        org.save()
-        return Response({
-            'success'      : True,
-            'message'      : 'Organisation updated.',
-            'organisation' : OrgDetailSerializer(org, context={'request': request}).data,
-        })
-
-
-class OrgEmployeeListCreateView(APIView):
-    """
-    GET  /api/org/<org_id>/employees/  — list workers
-    POST /api/org/<org_id>/employees/  — create worker (returns plain_password once)
-    Org-Token required. URL kept as /employees/ for backward compatibility with frontend.
-    """
-    from timetable_app.permissions import IsOrgAdmin
-    permission_classes = [IsOrgAdmin]
-
-    def get(self, request, org_id):
-        org = request.org
-        if org.org_id != org_id:
-            return Response({'error': 'Token mismatch.'}, status=status.HTTP_403_FORBIDDEN)
-        employees = User.objects.filter(org=org, role=User.Role.WORKER)
-        return Response({
-            'success'  : True,
-            'count'    : employees.count(),
-            'employees': WorkerListSerializer(employees, many=True).data,
-        })
-
-    def post(self, request, org_id):
-        from timetable_app.models import generate_user_id, generate_worker_password
-        org = request.org
-        if org.org_id != org_id:
-            return Response({'error': 'Token mismatch.'}, status=status.HTTP_403_FORBIDDEN)
-
-        full_name = request.data.get('full_name', '').strip()
-        if not full_name:
-            return Response({'error': 'full_name is required.'},
-                            status=status.HTTP_400_BAD_REQUEST)
-
-        plain_pwd = generate_worker_password(length=12)
-        worker = User(
-            full_name      = full_name,
-            role           = User.Role.WORKER,
-            org            = org,
-            plain_password = plain_pwd,
-        )
-        worker.user_id = generate_user_id()
-        worker.set_password(plain_pwd)
-        worker.save()
-        User.objects.filter(pk=worker.pk).update(plain_password=None)
-
-        return Response({
-            'success': True,
-            'message': f'Worker "{worker.full_name}" created. Save credentials — shown once.',
-            'employee': {
-                'id'            : worker.pk,
-                'full_name'     : worker.full_name,
-                'user_id'       : worker.user_id,
-                'plain_password': plain_pwd,
-                'role'          : 'WORKER',
-                'org'           : org.pk,
-                'login_url'     : request.build_absolute_uri(f'/#/org/{org_id}/join'),
-            },
-        }, status=status.HTTP_201_CREATED)
-
-
-class OrgEmployeeDetailView(APIView):
-    """
-    PATCH  /api/org/<org_id>/employees/<pk>/  — update worker
-    DELETE /api/org/<org_id>/employees/<pk>/  — deactivate worker
-    Org-Token required.
-    """
-    from timetable_app.permissions import IsOrgAdmin
-    permission_classes = [IsOrgAdmin]
-
-    def _get_emp(self, pk, org):
-        try:
-            return User.objects.get(pk=pk, org=org, role=User.Role.WORKER)
-        except User.DoesNotExist:
-            return None
-
-    def patch(self, request, org_id, pk):
-        org = request.org
-        if org.org_id != org_id:
-            return Response({'error': 'Token mismatch.'}, status=status.HTTP_403_FORBIDDEN)
-        emp = self._get_emp(pk, org)
-        if not emp:
-            return Response({'error': 'Employee not found.'}, status=status.HTTP_404_NOT_FOUND)
-        if 'full_name' in request.data:
-            emp.full_name = request.data['full_name'].strip()
-        if 'is_active' in request.data:
-            emp.is_active = bool(request.data['is_active'])
-        emp.save()
-        return Response({'success': True, 'employee': WorkerListSerializer(emp).data})
-
-    def delete(self, request, org_id, pk):
-        org = request.org
-        if org.org_id != org_id:
-            return Response({'error': 'Token mismatch.'}, status=status.HTTP_403_FORBIDDEN)
-        emp = self._get_emp(pk, org)
-        if not emp:
-            return Response({'error': 'Employee not found.'}, status=status.HTTP_404_NOT_FOUND)
-        emp.is_active = False
-        emp.save(update_fields=['is_active'])
-        return Response({'success': True, 'message': f'Employee "{emp.full_name}" deactivated.'})
-
-
-class OrgEmployeeResetPasswordView(APIView):
-    """POST /api/org/<org_id>/employees/<pk>/reset-password/  — Org-Token required"""
-    from timetable_app.permissions import IsOrgAdmin
-    permission_classes = [IsOrgAdmin]
-
-    def post(self, request, org_id, pk):
-        from timetable_app.models import generate_worker_password
-        org = request.org
-        if org.org_id != org_id:
-            return Response({'error': 'Token mismatch.'}, status=status.HTTP_403_FORBIDDEN)
-        try:
-            emp = User.objects.get(pk=pk, org=org, role=User.Role.WORKER)
-        except User.DoesNotExist:
-            return Response({'error': 'Employee not found.'}, status=status.HTTP_404_NOT_FOUND)
-        new_pw = generate_worker_password(length=12)
-        emp.set_password(new_pw)
-        emp.save()
-        return Response({
-            'success'     : True,
-            'message'     : f'Password reset for "{emp.full_name}".',
-            'user_id'     : emp.user_id,
-            'new_password': new_pw,
         })
 
 

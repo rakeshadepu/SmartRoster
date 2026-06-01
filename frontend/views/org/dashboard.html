@@ -14,9 +14,6 @@
         </div>
       </div>
       <div class="flex gap-8">
-        <button class="btn btn-secondary" ng-click="showSettings = !showSettings; showForm = false">
-          ⚙ Settings
-        </button>
         <a class="btn btn-primary" href="#/org/{{orgId}}/add-user">
           + Add User
         </a>
@@ -56,56 +53,6 @@
         </div>
         <button class="btn btn-sm btn-secondary mt-8" ng-click="createdCred = null">Dismiss</button>
       </div>
-
-      <!-- Settings panel -->
-      <div class="card mb-24" ng-if="showSettings" style="margin-bottom:20px">
-        <div class="card-header">
-          <div class="card-title">⚙ Organisation Settings</div>
-          <button class="btn btn-sm btn-secondary" ng-click="showSettings = false">Close</button>
-        </div>
-        <div class="card-body">
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">Organisation Name</label>
-              <input type="text" class="form-control" ng-model="settingsForm.name">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Admin Email</label>
-              <input type="email" class="form-control" ng-model="settingsForm.email">
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">Shop Opens</label>
-              <input type="time" class="form-control" ng-model="settingsForm.shop_open">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Shop Closes</label>
-              <input type="time" class="form-control" ng-model="settingsForm.shop_close">
-            </div>
-          </div>
-          <div style="margin-top:12px; padding-top:12px; border-top:1px solid var(--border)">
-            <div class="text-xs text-dim fw-600"
-              style="margin-bottom:10px;text-transform:uppercase;letter-spacing:.8px">
-              Change Password (optional)
-            </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label">New Password</label>
-                <input type="password" class="form-control" ng-model="settingsForm.password"
-                  placeholder="Leave blank to keep current">
-              </div>
-              <div class="form-group">
-                <label class="form-label">Confirm Password</label>
-                <input type="password" class="form-control" ng-model="settingsForm.confirm_pw">
-              </div>
-            </div>
-          </div>
-          <button class="btn btn-primary mt-8" ng-click="saveSettings()">Save Settings</button>
-        </div>
-      </div>
-
-
 
       <!-- Org owner card — data lives on Organisation, not a User row -->
       <div class="card mb-16" ng-if="org"
@@ -225,7 +172,7 @@
   <div class="modal">
     <div class="modal-header">
       <div class="modal-title">Edit Employee</div>
-      <button class="modal-close" ng-click="editModal = false">×</button>
+      <button class="modal-close" ng-click="closeEditModal()">×</button>
     </div>
     <div class="modal-body">
       <div class="form-group">
@@ -241,7 +188,7 @@
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-secondary" ng-click="editModal = false">Cancel</button>
+      <button class="btn btn-secondary" ng-click="closeEditModal()">Cancel</button>
       <button class="btn btn-primary" ng-click="saveEdit()">Save</button>
     </div>
   </div>
@@ -252,7 +199,7 @@
   <div class="modal">
     <div class="modal-header">
       <div class="modal-title">New Password</div>
-      <button class="modal-close" ng-click="resetModal = false">×</button>
+      <button class="modal-close" ng-click="closeEditModal()">×</button>
     </div>
     <div class="modal-body">
       <div class="alert alert-warn" style="margin-bottom:16px">

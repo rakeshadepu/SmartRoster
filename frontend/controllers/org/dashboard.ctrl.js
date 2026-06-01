@@ -26,20 +26,6 @@ angular.module("TimetableApp").controller("OrgDashboardCtrl", [
     $scope.resetModal = false;
     $scope.resetCred = null;
 
-    $scope.showSettings = false;
-    $scope.settingsForm = {
-      name: $scope.org ? $scope.org.name : "",
-      shop_open: $scope.org
-        ? ($scope.org.shop_open || "").slice(0, 5)
-        : "08:00",
-      shop_close: $scope.org
-        ? ($scope.org.shop_close || "").slice(0, 5)
-        : "18:00",
-      email: $scope.org ? $scope.org.email : "",
-      password: "",
-      confirm_pw: "",
-    };
-
     function loadAll() {
       $scope.loading = true;
       ApiService.orgMe(orgId)
@@ -47,16 +33,6 @@ angular.module("TimetableApp").controller("OrgDashboardCtrl", [
           $scope.org = res.data.organisation;
           AuthService.saveOrgSession(AuthService.getOrgToken(), $scope.org);
           $scope.employees = res.data.employees || [];
-          $scope.settingsForm.name = $scope.org.name;
-          $scope.settingsForm.shop_open = ($scope.org.shop_open || "").slice(
-            0,
-            5,
-          );
-          $scope.settingsForm.shop_close = ($scope.org.shop_close || "").slice(
-            0,
-            5,
-          );
-          $scope.settingsForm.email = $scope.org.email;
         })
         .catch(() => {
           $scope.error = "Session expired. Please log in again.";
@@ -104,7 +80,7 @@ angular.module("TimetableApp").controller("OrgDashboardCtrl", [
     };
 
     $scope.saveEdit = function () {
-      ApiService.orgUpdateEmployee(orgId, $scope.editEmployee.pk, {
+      ApiService.updateWorker(orgId, $scope.editEmployee.pk, {
         full_name: $scope.editEmployee.full_name,
         is_active: $scope.editEmployee.is_active,
       })
@@ -125,7 +101,7 @@ angular.module("TimetableApp").controller("OrgDashboardCtrl", [
 
     $scope.deactivate = function (emp) {
       if (!confirm(`Deactivate ${emp.full_name}?`)) return;
-      ApiService.orgDeleteEmployee(orgId, emp.id)
+      ApiService.deleteWorker(orgId, emp.id)
         .then(() => {
           $scope.success = `${emp.full_name} deactivated.`;
           loadAll();
@@ -142,7 +118,7 @@ angular.module("TimetableApp").controller("OrgDashboardCtrl", [
 
     $scope.resetPassword = function (emp) {
       if (!confirm(`Reset password for ${emp.full_name}?`)) return;
-      ApiService.orgResetEmpPw(orgId, emp.id)
+      ApiService.resetPassword(orgId, emp.id)
         .then((res) => {
           $scope.resetCred = {
             user_id: res.data.user_id,
@@ -155,41 +131,6 @@ angular.module("TimetableApp").controller("OrgDashboardCtrl", [
         });
     };
 
-    $scope.saveSettings = function () {
-      $scope.error = null;
-      const payload = {
-        name: $scope.settingsForm.name,
-        shop_open: $scope.settingsForm.shop_open,
-        shop_close: $scope.settingsForm.shop_close,
-        email: $scope.settingsForm.email,
-      };
-      if ($scope.settingsForm.password) {
-        if ($scope.settingsForm.password !== $scope.settingsForm.confirm_pw) {
-          $scope.error = "Passwords do not match.";
-          return;
-        }
-        payload.password = $scope.settingsForm.password;
-      }
-      ApiService.orgUpdate(orgId, payload)
-        .then((res) => {
-          $scope.success = "Settings saved.";
-          $scope.showSettings = false;
-          $scope.org = res.data.organisation;
-          AuthService.saveOrgSession(AuthService.getOrgToken(), $scope.org);
-          $scope.settingsForm.password = "";
-          $scope.settingsForm.confirm_pw = "";
-          setTimeout(() => {
-            $scope.$apply(() => {
-              $scope.success = null;
-            });
-          }, 3000);
-        })
-        .catch((err) => {
-          $scope.error =
-            err.data && err.data.error ? err.data.error : "Save failed.";
-        });
-    };
-
     $scope.copyText = function (text, $event) {
       navigator.clipboard.writeText(text);
       const btn = $event.target;
@@ -199,6 +140,17 @@ angular.module("TimetableApp").controller("OrgDashboardCtrl", [
         btn.textContent = "Copy";
         btn.classList.remove("copied");
       }, 2000);
+    };
+
+    $scope.closeEditModal = function () {
+      console.log("clicked")
+      $scope.editModal = false;
+      $scope.editEmployee = {};
+    };
+
+    $scope.closeResetModal = function () {
+      $scope.resetModal = false;
+      $scope.resetCred = null;
     };
 
     $scope.logout = function () {

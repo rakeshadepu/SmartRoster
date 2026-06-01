@@ -1,5 +1,5 @@
 <div class="app-layout">
-  
+
   <!-- Sidebar -->
   <nav class="sidebar" ng-include="'views/org/templates/sidebar.html'"></nav>
 
@@ -7,80 +7,218 @@
   <div class="main-content">
     <div class="page-header">
       <div>
-        <div class="page-title">Settings</div>
+        <div class="page-title">
+          <i class="fa-solid fa-gear"></i>
+          Settings
+        </div>
         <div class="page-sub">Shop hours and work type limits</div>
       </div>
     </div>
-    <div class="page-body">
-      <div ng-if="loading" class="text-dim flex items-center gap-8"><span class="spinner"></span> Loading…</div>
 
-      <div class="alert alert-error"   ng-if="error">⚠ {{error}}</div>
-      <div class="alert alert-success" ng-if="success">✓ {{success}}</div>
+    <div class="page-body">
+      <div ng-if="loading" class="text-dim flex items-center gap-8">
+        <span class="spinner"></span> Loading…
+      </div>
+
+      <div class="alert alert-error" ng-if="error">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        {{error}}
+      </div>
+
+      <div class="alert alert-success" ng-if="success">
+        <i class="fa-solid fa-circle-check"></i>
+        {{success}}
+      </div>
 
       <div class="grid-2" ng-if="!loading">
 
-        <!-- Shop hours -->
+        <!-- Organisation Settings -->
         <div class="card">
           <div class="card-header">
-            <div class="card-title">🏪 Shop Hours</div>
+            <div class="card-title">
+              <i class="fa-solid fa-building"></i>
+              Update Org Info
+            </div>
           </div>
+        
           <div class="card-body">
-            <div class="alert alert-info" style="margin-bottom:16px; font-size:12px">
+        
+            <div class="form-row">
+        
+              <div class="form-group">
+                <label class="form-label">
+                  <i class="fa-solid fa-building"></i>
+                  Organisation Name
+                </label>
+                <input type="text" class="form-control" ng-model="settingsForm.name">
+              </div>
+        
+              <div class="form-group">
+                <label class="form-label">
+                  <i class="fa-solid fa-envelope"></i>
+                  Admin Email
+                </label>
+        
+                <input type="email" class="form-control" ng-model="settingsForm.email">
+              </div>
+        
+            </div>
+        
+            <hr style="margin:20px 0;border-color:var(--border)">
+        
+            <div class="form-row">
+        
+              <div class="form-group">
+                <label class="form-label">
+                  <i class="fa-solid fa-lock"></i>
+                  New Password
+                </label>
+        
+                <input type="password" class="form-control" ng-model="settingsForm.password"
+                  placeholder="Leave blank to keep current password">
+              </div>
+        
+              <div class="form-group">
+                <label class="form-label">
+                  <i class="fa-solid fa-lock"></i>
+                  Confirm Password
+                </label>
+        
+                <input type="password" class="form-control" ng-model="settingsForm.confirm_pw">
+              </div>
+        
+            </div>
+        
+            <button class="btn btn-primary mt-8" ng-click="saveSettings()">
+        
+              <i class="fa-solid fa-floppy-disk"></i>
+              Save Organisation Settings
+        
+            </button>
+        
+          </div>
+        </div>
+
+        <!-- Shop Hours -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <i class="fa-solid fa-shop"></i>
+              Shop Hours
+            </div>
+          </div>
+
+          <div class="card-body">
+            <div class="alert alert-info" style="margin-bottom:16px;font-size:12px">
+              <i class="fa-solid fa-clock"></i>
               The scheduler will only assign shifts within these hours.
             </div>
+
             <div class="form-row">
               <div class="form-group">
-                <label class="form-label">Opening Time</label>
+                <label class="form-label">
+                  <i class="fa-solid fa-door-open"></i>
+                  Opening Time
+                </label>
                 <input type="time" class="form-control" ng-model="shopForm.shop_open">
               </div>
+
               <div class="form-group">
-                <label class="form-label">Closing Time</label>
+                <label class="form-label">
+                  <i class="fa-solid fa-door-closed"></i>
+                  Closing Time
+                </label>
                 <input type="time" class="form-control" ng-model="shopForm.shop_close">
               </div>
             </div>
+
             <button class="btn btn-primary mt-8" ng-click="saveShopHours()" ng-disabled="saving">
-              <span ng-if="saving"><span class="spinner"></span></span>
-              <span ng-if="!saving">Save Hours</span>
+              <span ng-if="saving">
+                <span class="spinner"></span>
+              </span>
+
+              <span ng-if="!saving">
+                Update Timings
+              </span>
             </button>
           </div>
         </div>
 
-        <!-- Work type limits -->
+        <!-- Weekly Limits -->
         <div class="card">
           <div class="card-header">
-            <div class="card-title">⏱ Weekly Hour Limits</div>
+            <div class="card-title">
+              <i class="fa-solid fa-business-time"></i>
+              Weekly Hour Limits
+            </div>
           </div>
+
           <div class="card-body">
-            <div class="alert alert-info" style="margin-bottom:16px; font-size:12px">
+            <div class="alert alert-info" style="margin-bottom:16px;font-size:12px">
+              <i class="fa-solid fa-hourglass-half"></i>
               Maximum hours per week assigned to each employment type.
             </div>
 
             <div ng-repeat="type in ['FULL_TIME', 'PART_TIME', 'MINIJOB']">
+
               <div class="form-group">
+
                 <label class="form-label">
-                  <span ng-if="type === 'FULL_TIME'">Full Time</span>
-                  <span ng-if="type === 'PART_TIME'">Part Time</span>
-                  <span ng-if="type === 'MINIJOB'">Mini Job</span>
+
+                  <span ng-if="type === 'FULL_TIME'">
+                    <i class="fa-solid fa-user-tie"></i>
+                    Full Time
+                  </span>
+
+                  <span ng-if="type === 'PART_TIME'">
+                    <i class="fa-solid fa-user-clock"></i>
+                    Part Time
+                  </span>
+
+                  <span ng-if="type === 'MINIJOB'">
+                    <i class="fa-solid fa-user"></i>
+                    Mini Job
+                  </span>
+
                   — hours/week
                 </label>
+
                 <div class="flex gap-8 items-center">
-                  <input type="number" class="form-control" ng-model="limitsForm[type]"
-                         min="1" max="60" style="width:100px">
+
+                  <input type="number" class="form-control" ng-model="limitsForm[type]" min="1" max="60"
+                    style="width:100px">
+
                   <button class="btn btn-sm btn-secondary" ng-click="saveLimit(type)">
-                    Save
+                    <i class="fa-solid fa-pen-to-square"></i>
+                    Update
                   </button>
-                  <span class="badge"
-                    ng-class="type === 'FULL_TIME' ? 'badge-green' : type === 'PART_TIME' ? 'badge-blue' : 'badge-amber'">
+
+                  <span class="badge" ng-class="type === 'FULL_TIME'
+                          ? 'badge-green'
+                          : type === 'PART_TIME'
+                          ? 'badge-blue'
+                          : 'badge-amber'">
+
+                    <i ng-if="type === 'FULL_TIME'" class="fa-solid fa-user-tie"></i>
+
+                    <i ng-if="type === 'PART_TIME'" class="fa-solid fa-user-clock"></i>
+
+                    <i ng-if="type === 'MINIJOB'" class="fa-solid fa-user"></i>
+
                     {{type.replace('_',' ')}}
                   </span>
+
                 </div>
+
               </div>
+
             </div>
 
           </div>
         </div>
 
-      </div><!-- /grid-2 -->
+      </div>
+      <!-- /grid-2 -->
 
     </div>
   </div>

@@ -124,10 +124,16 @@
               <div class="form-group">
                 <label class="form-label">Work Type *</label>
                 <select class="form-control" ng-model="form.work_type">
+                  <option value="" disabled selected>
+                    Select Employment Type
+                  </option>
                   <option value="FULL_TIME">Full Time (40h/week)</option>
                   <option value="PART_TIME">Part Time (20h/week)</option>
                   <option value="MINIJOB">Mini Job (10h/week)</option>
                 </select>
+                <div class="text-danger text-sm" ng-if="showWorkTypeError">
+                  Please choose a type of employment.
+                </div>
               </div>
             </div>
             <div class="alert alert-info" style="font-size:11px;margin-top:-4px">
@@ -176,11 +182,17 @@
             </div>
 
             <!-- Submit -->
-            <button class="btn btn-primary btn-full"
-                    ng-click="submit()"
-                    ng-disabled="loading || !form.first_name || !form.last_name ||
-                                 !form.email || !phoneOk"
-                    style="margin-top:20px">
+            <button class="btn btn-primary btn-full" ng-click="submit()" ng-disabled="
+                loading ||
+                !form.first_name ||
+                !form.last_name ||
+                !form.email ||
+                !phoneOk ||
+                !form.dob ||
+                !form.nationality ||
+                !form.work_type ||
+                !form.work_type
+              " style="margin-top:20px">
               <span ng-if="loading"><span class="spinner"></span></span>
               <span ng-if="!loading">Create User Account</span>
             </button>

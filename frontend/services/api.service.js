@@ -24,20 +24,77 @@ angular.module("TimetableApp").service("ApiService", [
     this.orgLogout = (orgId) => $http.post(`${B}/org/${orgId}/logout/`, {});
 
     // ── Org admin (Org-Token) ─────────────────────────────────────────────
-    this.orgMe = (orgId) => $http.get(`${B}/org/${orgId}/me/`);
-    this.orgUpdate = (orgId, data) =>
-      $http.patch(`${B}/org/${orgId}/update/`, data);
 
-    this.orgListEmployees = (orgId) =>
-      $http.get(`${B}/org/${orgId}/employees/`);
-    this.orgCreateEmployee = (orgId, data) =>
-      $http.post(`${B}/org/${orgId}/employees/`, data);
-    this.orgUpdateEmployee = (orgId, pk, d) =>
-      $http.patch(`${B}/org/${orgId}/employees/${pk}/`, d);
-    this.orgDeleteEmployee = (orgId, pk) =>
-      $http.delete(`${B}/org/${orgId}/employees/${pk}/`);
-    this.orgResetEmpPw = (orgId, pk) =>
-      $http.post(`${B}/org/${orgId}/employees/${pk}/reset-password/`, {});
+    this.orgMe = (orgId) =>
+      $http.get(`${B}/org/${orgId}/me/`);
+
+    this.orgUpdate = function (orgId, data) {
+      return $http({
+        method: "PATCH",
+        url: `${B}/org/${orgId}/settings/`,
+        data: data,
+      });
+    };
+
+    // Add user + global search
+    this.orgAddUser = (orgId, data) =>
+      $http.post(`${B}/org/${orgId}/add-user/`, data);
+
+    this.orgSearchUser = (orgId, q) =>
+      $http.get(`${B}/org/${orgId}/global-users/`, {
+        params: { q },
+      });
+
+    // ── Organisation settings ─────────────────────────────────────────────
+
+    this.getOrg = (orgId) =>
+      $http.get(`${B}/org/${orgId}/settings/`);
+
+    this.updateOrg = function (orgId, data) {
+      return $http({
+        method: "PATCH",
+        url: `${B}/org/${orgId}/settings/`,
+        data: data,
+      });
+    };
+
+    // ── Workers ────────────────────────────────────────────────────────────
+
+    // Public worker list
+    this.getPublicWorkers = (orgId) =>
+      $http.get(`${B}/org/${orgId}/workers/public/`);
+
+    // List workers
+    this.listWorkers = (orgId, params) =>
+      $http.get(`${B}/org/${orgId}/C/`, { params });
+
+    // Create worker
+    this.createWorker = (orgId, data) =>
+      $http.post(`${B}/org/${orgId}/workers/`, data);
+
+    // Get worker
+    this.getWorker = (orgId, userId) =>
+      $http.get(`${B}/org/${orgId}/workers/${userId}/`);
+
+    // Update worker
+    this.updateWorker = function (orgId, userId, data) {
+      return $http({
+        method: "PATCH",
+        url: `${B}/org/${orgId}/workers/${userId}/`,
+        data: data,
+      });
+    };
+
+    // Delete worker
+    this.deleteWorker = (orgId, userId) =>
+      $http.delete(`${B}/org/${orgId}/workers/${userId}/`);
+
+    // Reset password
+    this.resetPassword = (orgId, userId) =>
+      $http.post(
+        `${B}/org/${orgId}/workers/${userId}/reset-password/`,
+        {}
+      );
 
     // Add user + global search (Org-Token)
     this.orgAddUser = (orgId, data) =>
@@ -47,8 +104,13 @@ angular.module("TimetableApp").service("ApiService", [
 
     // ── Organisation settings (Employee JWT) ─────────────────────────────
     this.getOrg = (orgId) => $http.get(`${B}/org/${orgId}/settings/`);
-    this.updateOrg = (orgId, data) =>
-      $http.patch(`${B}/org/${orgId}/settings/`, data);
+    this.updateOrg = function (orgId, data) {
+      return $http({
+        method: "PATCH",
+        url: `${B}/org/${orgId}/settings/`,
+        data: data,
+      });
+    };
 
     // ── Work type limits ──────────────────────────────────────────────────
     this.getLimits = () => $http.get(`${B}/work-limits/`);
@@ -66,8 +128,13 @@ angular.module("TimetableApp").service("ApiService", [
     // Single worker by user_id  →  /api/org/<orgId>/<userId>/
     this.getWorker = (orgId, userId) =>
       $http.get(`${B}/org/${orgId}/${userId}/`);
-    this.updateWorker = (orgId, userId, d) =>
-      $http.patch(`${B}/org/${orgId}/${userId}/`, d);
+    this.updateWorker = function (orgId, userId, data) {
+      return $http({
+        method: "PATCH",
+        url: `${B}/org/${orgId}/${userId}/`,
+        data: data,
+      });
+    };
     this.deleteWorker = (orgId, userId) =>
       $http.delete(`${B}/org/${orgId}/${userId}/`);
     this.resetPassword = (orgId, userId) =>
@@ -78,8 +145,13 @@ angular.module("TimetableApp").service("ApiService", [
       $http.get(`${B}/availability/`, { params: p });
     this.submitAvailability = (data) => $http.post(`${B}/availability/`, data);
     this.deleteAvailability = (pk) => $http.delete(`${B}/availability/${pk}/`);
-    this.patchAvailability = (pk, d) =>
-      $http.patch(`${B}/availability/${pk}/`, d);
+    this.patchAvailability = function (pk, data) {
+      return $http({
+        method: "PATCH",
+        url: `${B}/availability/${pk}/`,
+        data: data,
+      });
+    };
 
     // ── Timetable ─────────────────────────────────────────────────────────
     this.listTimetables = () => $http.get(`${B}/timetable/`);
@@ -95,8 +167,13 @@ angular.module("TimetableApp").service("ApiService", [
       $http.get(`${B}/timetable/${pk}/worker/`, {
         params: wp ? { worker_pk: wp } : {},
       });
-    this.patchShift = (tp, sp, d) =>
-      $http.patch(`${B}/timetable/${tp}/shifts/${sp}/`, d);
+    this.patchShift = function (tp, sp, data) {
+      return $http({
+        method: "PATCH",
+        url: `${B}/timetable/${tp}/shifts/${sp}/`,
+        data: data,
+      });
+    };
     this.deleteShift = (tp, sp) =>
       $http.delete(`${B}/timetable/${tp}/shifts/${sp}/delete/`);
     this.getTimetableHTML = (pk) =>

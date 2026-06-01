@@ -205,6 +205,27 @@ angular
         );
       };
 
+      $rootScope.showCopyToast = false;
+
+      $rootScope.copyJoinLink = function ($event) {
+        if ($event) $event.preventDefault();
+
+        const org = JSON.parse(localStorage.getItem("org") || "{}");
+
+        const joinLink =
+          window.location.origin + "/#/org/" + org.org_id + "/join";
+
+        navigator.clipboard.writeText(joinLink);
+
+        $rootScope.showCopyToast = true;
+
+        setTimeout(function () {
+          $rootScope.$apply(function () {
+            $rootScope.showCopyToast = false;
+          });
+        }, 2500);
+      };
+
       $rootScope.$on("$routeChangeStart", function (event, next) {
         var access = next.access || "private";
         var user = AuthService.getUser();

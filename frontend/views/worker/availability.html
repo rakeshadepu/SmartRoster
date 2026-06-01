@@ -1,31 +1,6 @@
 <div class="app-layout">
-  <nav class="sidebar">
-    <div class="sidebar-brand">
-      <div class="brand-mark">
-        <div class="brand-icon">📅</div>
-        <div>
-          <div class="brand-name">Timetable</div>
-          <div class="brand-sub">Planner</div>
-        </div>
-      </div>
-    </div>
-    <div class="sidebar-user">
-      <div class="user-name">{{user.full_name}}</div>
-      <div class="user-role">{{user.role}}</div>
-      <div class="user-id">{{user.user_id}}</div>
-    </div>
-    <div class="sidebar-nav">
-      <div class="nav-section-label">My Schedule</div>
-      <a class="nav-link " href="#/org/{{orgId}}/u/{{userId}}/dashboard"><span
-          class="nav-icon">⊞</span><span>Dashboard</span></a>
-      <a class="nav-link active" href="#/org/{{orgId}}/u/{{userId}}/availability"><span
-          class="nav-icon">✓</span><span>My Availability</span></a>
-      <a class="nav-link " href="#/org/{{orgId}}/u/{{userId}}/timetable"><span class="nav-icon">📋</span><span>My
-          Timetable</span></a>
-    </div>
-    <div class="sidebar-footer"><button class="btn-logout" ng-click="logout()"><span>⎋</span><span>Sign
-          out</span></button></div>
-  </nav>
+  <!-- Sidebar -->
+  <nav class="sidebar" ng-include="'views/worker/templates/sidebar.html'"></nav>
 
   <div class="main-content">
     <div class="page-header">
@@ -36,8 +11,8 @@
     </div>
     <div class="page-body">
 
-      <div class="alert alert-error" ng-if="error">⚠ {{error}}</div>
-      <div class="alert alert-success" ng-if="success">✓ {{success}}</div>
+      <div class="alert alert-error" ng-if="error"><i class="fa-solid fa-triangle-exclamation"></i> {{error}}</div>
+      <div class="alert alert-success" ng-if="success"><i class="fa-solid fa-circle-check"></i> {{success}}</div>
 
       <div class="card" style="max-width:580px">
         <div class="card-header">
@@ -85,7 +60,7 @@
               <span ng-if="loading"><span class="spinner"></span></span>
               <span ng-if="!loading">Save Availability</span>
             </button>
-            <button class="btn btn-secondary" ng-click="slots.forEach(function(s){ s.checked=false; })">
+            <button class="btn btn-secondary" ng-click="clearAll()">
               Clear All
             </button>
           </div>

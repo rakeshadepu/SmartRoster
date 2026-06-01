@@ -81,7 +81,7 @@ class OrganisationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model  = Organisation
-        fields = ['id', 'name', 'shop_open', 'shop_close', 'user_count',
+        fields = ['org_id', 'name', 'shop_open', 'shop_close', 'user_count',
                   'created_at', 'updated_at']
         read_only_fields = ['id', 'user_count', 'created_at', 'updated_at']
 
@@ -90,7 +90,7 @@ class OrganisationSerializer(serializers.ModelSerializer):
 
 
 class OrganisationUpdateSerializer(serializers.ModelSerializer):
-    """Employee-only: update shop open/close times."""
+    """Organisation admin-only: update shop open/close times."""
     class Meta:
         model  = Organisation
         fields = ['shop_open', 'shop_close']
@@ -777,5 +777,5 @@ class GlobalUserSearchSerializer(serializers.ModelSerializer):
 
     def get_current_org(self, obj):
         if obj.org:
-            return {'name': obj.org.name, 'org_id': obj.org.org_id}
+            return {'name': obj.org.name}
         return None

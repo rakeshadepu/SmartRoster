@@ -1,41 +1,84 @@
+<div class="sidebar-brand">
+  <div class="brand-mark">
+    <div class="brand-icon"><i class="fa-solid fa-calendar-check"></i></div>
+    <div>
+      <div class="brand-name">{{org.name}}</div>
+      <div class="brand-sub">Org Admin</div>
+    </div>
+  </div>
+</div>
+<div class="sidebar-user">
+  <div class="user-name">{{org.name}}</div>
+  <div class="user-role" style="color:var(--accent)">Organisation Admin</div>
+  <div class="user-id mono" style="font-size:10px">Org. ID: {{org.org_id}}</div>
+</div>
+<div class="sidebar-nav">
+  <div class="nav-section-label">Organisation</div>
+  <a class="nav-link active" href="#/org/{{orgId}}/dashboard">
+    <i class="fa-solid fa-house"></i>
+    <span>Home</span>
+  </a>
 
-    <div class="sidebar-brand">
-      <div class="brand-mark">
-        <div class="brand-icon"><i class="fa-regular fa-calendar"></i></div>
-        <div>
-          <div class="brand-name">{{org.name}}</div>
-          <div class="brand-sub">Org Admin</div>
-        </div>
-      </div>
-    </div>
-    <div class="sidebar-user">
-      <div class="user-name">{{org.name}}</div>
-      <div class="user-role" style="color:var(--accent)">Organisation Admin</div>
-      <div class="user-id mono" style="font-size:10px">Org. ID: {{org.org_id}}</div>
-    </div>
-    <div class="sidebar-nav">
-      <div class="nav-section-label">Organisation</div>
-      <a class="nav-link active" href="#/org/{{orgId}}/dashboard">
-        <i class="fa-solid fa-house"></i><span>Dashboard</span>
-      </a>
-      <a class="nav-link" href="#/org/{{orgId}}/manage">
-        <i class="fa-solid fa-users"></i><span>Employee</span>
-      </a>
-      <a class="nav-link" href="#/org/{{orgId}}/schedule">
-        <i class="fa-solid fa-table-list"></i><span>Scheduler</span>
-      </a>
-      <a class="nav-link" href="#/org/{{orgId}}/settings">
-        <i class="fa-solid fa-shop"></i><span>Org Settings</span>
-      </a>
-      <div class="nav-section-label" style="margin-top:8px">Links</div>
-      <a class="nav-link" href="#/org/{{orgId}}/join" target="_blank">
-        <i class="fa-solid fa-link"></i><span>Worker Join Link</span>
-      </a>
-      <a class="nav-link" href="#/org/{{orgId}}/global-users">
-        <i class="fa-solid fa-magnifying-glass"></i><span>Global Users</span>
-      </a>
-    </div>
-    <div class="sidebar-footer">
-      <button class="btn-logout" ng-click="logout()"><i class="fa-solid fa-arrow-right-from-bracket"></i><span>Sign out</span></button>
-    </div>
+  <a class="nav-link" href="#/org/{{orgId}}/manage">
+    <i class="fa-solid fa-users"></i>
+    <span>Employees</span>
+  </a>
 
+  <a class="nav-link" href="#/org/{{orgId}}/schedule">
+    <i class="fa-solid fa-table-list"></i>
+    <span>Scheduler</span>
+  </a>
+
+  <a class="nav-link" href="#/org/{{orgId}}/settings">
+    <i class="fa-solid fa-shop"></i>
+    <span>Organisation Settings</span>
+  </a>
+
+  <div class="nav-section-label" style="margin-top:8px">Resources</div>
+
+  <a class="nav-link" href="" ng-click="copyJoinLink($event)">
+    <i class="fa-solid fa-link"></i>
+    <span>Worker Login Link</span>
+  </a>
+
+  <a class="nav-link" href="#/org/{{orgId}}/global-users">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span>Global Workforce</span>
+  </a>
+  
+</div>
+<div class="copy-toast" ng-show="showCopyToast">
+  <i class="fa-solid fa-circle-check"></i>
+  Worker joining link copied to clipboard
+</div>
+<div class="sidebar-footer">
+  <button class="btn-logout" ng-click="logout()"><i class="fa-solid fa-arrow-right-from-bracket"></i><span>Sign
+      out</span></button>
+</div>
+<style>
+  .copy-toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  padding: 12px 18px;
+
+  background: #1f2937;
+  color: #fff;
+
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0,0,0,.25);
+
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.copy-toast i {
+  color: #22c55e;
+}
+</style>

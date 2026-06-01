@@ -19,31 +19,94 @@ class WorkTypeLimitAdmin(admin.ModelAdmin):
     list_display  = ['org', 'work_type', 'hours_per_week']
     list_filter   = ['work_type', 'org']
 
-
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
-    list_display   = ['user_id', 'full_name', 'role', 'work_type', 'org', 'is_active']
-    list_filter    = ['role', 'work_type', 'is_active', 'org']
-    search_fields  = ['user_id', 'full_name']
-    readonly_fields = ['user_id', 'created_at', 'updated_at', 'plain_password']
-    ordering       = ['full_name']
+    ordering = ['full_name']
+    list_display = [
+        'user_id',
+        'full_name',
+        'email',
+        'phone',
+        'work_type',
+        'org',
+        'is_active'
+    ]
+
+    list_filter = [
+        'role',
+        'work_type',
+        'is_active',
+        'org'
+    ]
+
+    search_fields = [
+        'user_id',
+        'full_name',
+        'email',
+        'phone'
+    ]
+
+    readonly_fields = [
+        'user_id',
+        'created_at',
+        'updated_at',
+        'plain_password'
+    ]
 
     fieldsets = (
-        ('Identity',    {'fields': ('user_id', 'full_name', 'password')}),
-        ('Role',        {'fields': ('role', 'work_type', 'org')}),
-        ('Status',      {'fields': ('is_active', 'is_staff', 'is_superuser')}),
-        ('Debug',       {'fields': ('plain_password',), 'classes': ('collapse',)}),
-        ('Timestamps',  {'fields': ('created_at', 'updated_at'), 'classes': ('collapse',)}),
-    )
+        ('Identity', {
+            'fields': (
+                'user_id',
+                'first_name',
+                'last_name',
+                'full_name',
+                'password'
+            )
+        }),
 
-    add_fieldsets = (
-        (None, {
-            'classes': ('wide',),
-            'fields':  ('full_name', 'role', 'work_type', 'org', 'password1', 'password2'),
+        ('Contact Details', {
+            'fields': (
+                'email',
+                'phone',
+                'nationality',
+                'dob'
+            )
+        }),
+
+        ('Bank Details', {
+            'fields': (
+                'iban',
+                'bic'
+            )
+        }),
+
+        ('Employment', {
+            'fields': (
+                'role',
+                'work_type',
+                'org'
+            )
+        }),
+
+        ('Status', {
+            'fields': (
+                'is_active',
+                'is_staff',
+                'is_superuser'
+            )
+        }),
+
+        ('Debug', {
+            'fields': ('plain_password',),
+            'classes': ('collapse',)
+        }),
+
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
         }),
     )
-
-
+    
 @admin.register(Availability)
 class AvailabilityAdmin(admin.ModelAdmin):
     list_display  = ['worker', 'week_start', 'day', 'start_time', 'submitted_at']

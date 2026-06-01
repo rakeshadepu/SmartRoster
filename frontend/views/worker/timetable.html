@@ -1,46 +1,25 @@
 <div class="app-layout">
-  <nav class="sidebar">
-    <div class="sidebar-brand">
-      <div class="brand-mark">
-        <div class="brand-icon">📅</div>
-        <div>
-          <div class="brand-name">Timetable</div>
-          <div class="brand-sub">Planner</div>
-        </div>
-      </div>
-    </div>
-    <div class="sidebar-user">
-      <div class="user-name">{{user.full_name}}</div>
-      <div class="user-role">{{user.role}}</div>
-      <div class="user-id">{{user.user_id}}</div>
-    </div>
-    <div class="sidebar-nav">
-      <div class="nav-section-label">My Schedule</div>
-      <a class="nav-link " href="#/org/{{orgId}}/u/{{userId}}/dashboard"><span
-          class="nav-icon">⊞</span><span>Dashboard</span></a>
-      <a class="nav-link " href="#/org/{{orgId}}/u/{{userId}}/availability"><span class="nav-icon">✓</span><span>My
-          Availability</span></a>
-      <a class="nav-link active" href="#/org/{{orgId}}/u/{{userId}}/timetable"><span class="nav-icon">📋</span><span>My
-          Timetable</span></a>
-    </div>
-    <div class="sidebar-footer"><button class="btn-logout" ng-click="logout()"><span>⎋</span><span>Sign
-          out</span></button></div>
-  </nav>
-
+  
+  <!-- Sidebar -->
+  <nav class="sidebar" ng-include="'views/worker/templates/sidebar.html'"></nav>
   <div class="main-content">
     <div class="page-header">
       <div>
-        <div class="page-title">My Timetable</div>
+        <div class="page-title"><i class="fa-solid fa-calendar-days"></i>
+          My Timetable</div>
         <div class="page-sub">View-only — contact your manager for changes</div>
       </div>
-      <button class="btn btn-accent" ng-click="downloadPdf()" ng-if="selected">⬇ Download PDF</button>
+      <button class="btn btn-accent" ng-click="downloadPdf()" ng-if="selected"><i class="fa-solid fa-file-pdf"></i>
+         Download PDF</button>
     </div>
     <div class="page-body">
       <div ng-if="loading" class="text-dim flex items-center gap-8"><span class="spinner"></span> Loading…</div>
-      <div class="alert alert-error" ng-if="error">⚠ {{error}}</div>
+      <div class="alert alert-error" ng-if="error"><i class="fa-solid fa-triangle-exclamation"></i>
+         {{error}}</div>
 
       <!-- No published timetables -->
       <div class="alert alert-info" ng-if="!loading && timetables.length === 0">
+        <i class="fa-solid fa-circle-info"></i>
         No published timetables yet. Your manager will publish one soon.
       </div>
 
@@ -50,7 +29,8 @@
         <div style="width:200px;flex-shrink:0">
           <div class="card">
             <div class="card-header">
-              <div class="card-title">Weeks</div>
+              <div class="card-title"><i class="fa-solid fa-calendar-week"></i>
+                Weeks</div>
             </div>
             <div ng-repeat="tt in timetables" ng-click="selectTimetable(tt)"
               style="padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s"
@@ -73,12 +53,14 @@
               <div class="stat-sub">to {{weekEnd}}</div>
             </div>
             <div class="stat-card">
-              <div class="stat-label">My Hours</div>
+              <div class="stat-label"><i class="fa-solid fa-clock"></i> 
+                My Hours</div>
               <div class="stat-value stat-accent">{{totalHours}}</div>
               <div class="stat-sub">of {{weekBudget}}h budget</div>
             </div>
             <div class="stat-card">
-              <div class="stat-label">Utilisation</div>
+              <div class="stat-label"><i class="fa-solid fa-chart-simple"></i>
+                Utilisation</div>
               <div class="stat-value" style="font-size:18px">{{utilisationPct()}}%</div>
               <div style="background:var(--border);border-radius:3px;height:4px;margin-top:8px">
                 <div style="height:4px;border-radius:3px;background:var(--olive);width:{{utilisationPct()}}%"></div>
@@ -89,7 +71,8 @@
           <!-- Week grid (personal) -->
           <div class="card">
             <div class="card-header">
-              <div class="card-title">Weekly Schedule</div>
+              <div class="card-title"><i class="fa-solid fa-table-list"></i>
+                Weekly Schedule</div>
             </div>
             <div class="tt-grid">
               <table class="tt-table">
@@ -120,14 +103,15 @@
             <!-- Shift detail list -->
             <div style="padding:16px;border-top:1px solid var(--border)" ng-if="myShifts.length > 0">
               <div class="text-xs text-dim fw-600"
-                style="text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px">Shift Details</div>
+                style="text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px"><i class="fa-solid fa-list-check"></i>
+                Shift Details</div>
               <div ng-repeat="s in myShifts"
                 style="display:flex;align-items:center;gap:16px;padding:10px 0;border-bottom:1px solid var(--border)"
                 ng-if="$last" style="border-bottom:none">
                 <div style="width:100px" class="fw-600 text-cream">{{s.day_display}}</div>
                 <div class="flex gap-8 items-center">
                   <span class="badge badge-green">{{s.start_time.slice(0,5)}}</span>
-                  <span class="text-dim">→</span>
+                  <span class="text-dim"><i class="fa-solid fa-arrow-right"></i></span>
                   <span class="badge badge-green">{{s.end_time.slice(0,5)}}</span>
                 </div>
                 <div class="text-dim text-sm">{{s.hours}}h</div>

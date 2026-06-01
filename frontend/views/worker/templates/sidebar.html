@@ -1,0 +1,43 @@
+<div class="sidebar-brand">
+    <div class="brand-mark">
+        <div class="brand-icon">
+            <i class="fa-solid fa-calendar-check"></i>
+        </div>
+        <div>
+            <div class="brand-name">Timetable</div>
+            <div class="brand-sub">Planner</div>
+        </div>
+    </div>
+</div>
+
+<div class="sidebar-user">
+    <div class="user-name">{{user.full_name}}</div>
+    <div class="user-role">{{user.role}}</div>
+    <div class="user-id">{{user.user_id}}</div>
+</div>
+
+<div class="sidebar-nav">
+    <div class="nav-section-label">My Schedule</div>
+
+    <a class="nav-link" href="#/org/{{orgId}}/u/{{userId}}/dashboard">
+        <i class="fa-solid fa-table-columns"></i>
+        <span>Dashboard</span>
+    </a>
+
+    <a class="nav-link active" href="#/org/{{orgId}}/u/{{userId}}/availability">
+        <i class="fa-solid fa-calendar-check"></i>
+        <span>My Availability</span>
+    </a>
+
+    <a class="nav-link" href="#/org/{{orgId}}/u/{{userId}}/timetable">
+        <i class="fa-solid fa-clipboard-list"></i>
+        <span>My Timetable</span>
+    </a>
+</div>
+
+<div class="sidebar-footer">
+    <button class="btn-logout" ng-click="logout()">
+        <i class="fa-solid fa-arrow-right-from-bracket"></i>
+        <span>Sign out</span>
+    </button>
+</div>

@@ -20,7 +20,7 @@ The system ensures fair distribution of work hours while respecting individual a
 
 ## Features
 
-### Admin / Employee (Manager Role)
+### Admin (Manager Role)
 
 * Create, update, and delete workers
 * Assign roles:
