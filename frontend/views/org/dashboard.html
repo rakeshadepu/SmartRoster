@@ -1,41 +1,7 @@
 <div class="app-layout">
 
   <!-- Sidebar -->
-  <nav class="sidebar">
-    <div class="sidebar-brand">
-      <div class="brand-mark">
-        <div class="brand-icon"><i class="fa-solid fa-building"></i></div>
-        <div>
-          <div class="brand-name">{{org.name}}</div>
-          <div class="brand-sub">Org Admin</div>
-        </div>
-      </div>
-    </div>
-    <div class="sidebar-user">
-      <div class="user-name">{{org.name}}</div>
-      <div class="user-role" style="color:var(--accent)">Organisation Admin</div>
-      <div class="user-id mono" style="font-size:10px">{{org.org_id}}</div>
-    </div>
-    <div class="sidebar-nav">
-      <div class="nav-section-label">Organisation</div>
-      <a class="nav-link active" href="#/org/{{orgId}}/dashboard">
-        <span class="nav-icon"><i class="fa-solid fa-user"></i></span><span>Employees</span>
-      </a>
-      <!-- <a class="nav-link" ng-click="showSettings=!showSettings;showForm=false" style="cursor:pointer">
-        <span class="nav-icon"></span><span><i class="fa-solid fa-gear"></i>Settings</span>
-      </a> -->
-      <div class="nav-section-label" style="margin-top:8px">Links</div>
-      <a class="nav-link" href="#/org/{{orgId}}/join" target="_blank">
-        <span class="nav-icon">🔗</span><span>Worker Join Link</span>
-      </a>
-      <a class="nav-link" href="#/org/{{orgId}}/global-users">
-        <span class="nav-icon">🔍</span><span>Global Users</span>
-      </a>
-    </div>
-    <div class="sidebar-footer">
-      <button class="btn-logout" ng-click="logout()"><span>⎋</span><span>Sign out</span></button>
-    </div>
-  </nav>
+  <nav class="sidebar" ng-include="'views/org/templates/sidebar.html'"></nav>
 
   <!-- Main -->
   <div class="main-content">
@@ -86,7 +52,7 @@
           <button class="credential-copy" ng-click="copyText(createdCred.plain_password, $event)">Copy</button>
         </div>
         <div class="alert alert-info" style="margin-top:10px; font-size:12px">
-          This employee can now log in at <strong>#/login</strong> using their User ID and password.
+          This worker can now log in at <strong>#/login</strong> using their User ID and password.
         </div>
         <button class="btn btn-sm btn-secondary mt-8" ng-click="createdCred = null">Dismiss</button>
       </div>
@@ -205,9 +171,9 @@
             <tbody>
               <tr ng-if="employees.length === 0">
                 <td colspan="4" class="text-dim text-sm">
-                  No employees yet.
+                  No workers yet.
                   <button class="btn btn-sm btn-primary" ng-click="showForm = true" style="margin-left:10px">
-                    Add first employee
+                    Add first worker
                   </button>
                 </td>
               </tr>
@@ -237,12 +203,12 @@
         </div>
       </div>
 
-      <!-- Info box: what employees can do -->
+      <!-- Info box: worker login -->
       <div class="alert alert-info mt-16" style="margin-top:18px">
         <div>
           <div class="fw-600 mb-4">Employees log in at the standard login page</div>
           <div class="text-sm">
-            Once an employee account is created, they log in at
+            Once a worker account is created, they log in at
             <a href="#/org/{{orgId}}/join" style="color:inherit;text-decoration:underline">#/login</a>
             using their User ID and password. Employees can then create workers,
             set availability rules, generate timetables, and export PDFs.
@@ -254,7 +220,7 @@
   </div><!-- /main-content -->
 </div>
 
-<!-- Edit employee modal -->
+<!-- Edit worker modal -->
 <div class="modal-overlay" ng-if="editModal">
   <div class="modal">
     <div class="modal-header">

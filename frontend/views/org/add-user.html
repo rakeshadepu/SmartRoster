@@ -1,19 +1,14 @@
 <div class="app-layout">
-  <nav class="sidebar">
-    <div class="sidebar-brand"><div class="brand-mark"><div class="brand-icon">🏢</div><div><div class="brand-name">Org Admin</div><div class="brand-sub">Add User</div></div></div></div>
-    <div class="sidebar-nav">
-      <div class="nav-section-label">Navigation</div>
-      <a class="nav-link" href="#/org/{{orgId}}/dashboard"><span class="nav-icon">←</span><span>Back to Dashboard</span></a>
-      <a class="nav-link" href="#/org/{{orgId}}/global-users"><span class="nav-icon"><i class="fa-solid fa-magnifying-glass"></i></span><span>Global Users</span></a>
-    </div>
-    <div class="sidebar-footer"><button class="btn-logout" ng-click="goBack()"><span>←</span><span>Dashboard</span></button></div>
-  </nav>
+  
+  <!-- Sidebar -->
+  <nav class="sidebar" ng-include="'views/org/templates/sidebar.html'"></nav>
 
+  <!-- Main -->
   <div class="main-content">
     <div class="page-header">
       <div>
         <div class="page-title">Add User</div>
-        <div class="page-sub">Create a new employee or worker account</div>
+        <div class="page-sub">Create a new worker account</div>
       </div>
       <a class="btn btn-secondary" href="#/org/{{orgId}}/dashboard">← Dashboard</a>
     </div>
@@ -124,7 +119,6 @@
                 <label class="form-label">Role *</label>
                 <select class="form-control" ng-model="form.role">
                   <option value="WORKER">Worker</option>
-                  <option value="EMPLOYEE">Employee (Manager)</option>
                 </select>
               </div>
               <div class="form-group">

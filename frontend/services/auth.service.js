@@ -7,7 +7,7 @@ angular.module("TimetableApp").service("AuthService", [
   function ($window, $rootScope, $http) {
     const B = "http://127.0.0.1:8000/api";
 
-    // ── JWT session (employee / worker) ──────────────────────────────────
+    // ── JWT session (worker) ──────────────────────────────────────────────
     this.saveSession = function (tokens, user) {
       $window.localStorage.setItem("access_token", tokens.access);
       $window.localStorage.setItem("refresh_token", tokens.refresh);
@@ -26,6 +26,7 @@ angular.module("TimetableApp").service("AuthService", [
     this.getToken = function () {
       return $window.localStorage.getItem("access_token");
     };
+
     this.isAuthenticated = function () {
       return !!this.getToken();
     };
@@ -39,7 +40,6 @@ angular.module("TimetableApp").service("AuthService", [
           $window.localStorage.removeItem("access_token");
           $window.localStorage.removeItem("refresh_token");
           $window.localStorage.removeItem("user");
-          // Do NOT clear org / org_token here — worker may share device with org admin
           $rootScope.$emit("userChanged");
           $window.location.href = org ? "#/org/" + org.org_id + "/join" : "#/";
           $window.location.reload();
@@ -48,9 +48,6 @@ angular.module("TimetableApp").service("AuthService", [
 
     // ── Org-Token session (org admin) ─────────────────────────────────────
     this.saveOrgSession = function (org_token, org) {
-      // IMPORTANT: only store a real token string — never store null/undefined
-      // When called from join.ctrl.js after worker login (org_token is null),
-      // we only persist the org object for sidebar display, not a token.
       if (org_token && org_token !== "null") {
         $window.localStorage.setItem("org_token", org_token);
       }
@@ -70,7 +67,6 @@ angular.module("TimetableApp").service("AuthService", [
 
     this.getOrgToken = function () {
       var t = $window.localStorage.getItem("org_token");
-      // Guard against the string "null" being stored from a previous bug
       return t && t !== "null" ? t : null;
     };
 
@@ -86,11 +82,52 @@ angular.module("TimetableApp").service("AuthService", [
       $window.location.reload();
     };
 
+    // ── Session conflict detection ────────────────────────────────────────
+
+    /**
+     * Returns a description of the currently active session, or null if none.
+     * Used by login controllers to block a second login in the same browser.
+     *
+     * Return shape:
+     *   null                        — no active session
+     *   { type: 'worker', name, orgId, logoutFn }
+     *   { type: 'org',    name, orgId, logoutFn }
+     */
+    var self = this;
+
+    this.activeSession = function () {
+      // Worker JWT session
+      if (this.isAuthenticated()) {
+        var user = this.getUser();
+        var org  = this.getOrg();
+        return {
+          type    : "worker",
+          name    : user ? user.full_name : "a worker",
+          orgId   : org  ? org.org_id    : (user && user.org_slug),
+          logoutFn: function () { self.logout(); },
+        };
+      }
+      // Org-Token session
+      if (this.isOrgAdmin()) {
+        var org = this.getOrg();
+        return {
+          type    : "org",
+          name    : org ? org.name : "an organisation",
+          orgId   : org ? org.org_id : null,
+          logoutFn: function () {
+            var id = org ? org.org_id : "";
+            self.orgLogout(id);
+          },
+        };
+      }
+      return null;
+    };
+
     // ── Helpers ───────────────────────────────────────────────────────────
     this.getOrgId = function () {
-      var org = this.getOrg();
+      var org  = this.getOrg();
       var user = this.getUser();
-      if (org && org.org_id) return org.org_id;
+      if (org  && org.org_id)   return org.org_id;
       if (user && user.org_slug) return user.org_slug;
       return null;
     };

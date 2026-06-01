@@ -458,6 +458,43 @@
       background: var(--red-dim);
     }
 
+    .btn-block {
+      display: block;
+      width: 100%;
+      margin-top: 8px;
+    }
+
+    /* ── Session-blocked screen ─────────────────────────────── */
+    .session-blocked {
+      text-align: center;
+      padding: 12px 0 8px;
+    }
+
+    .session-blocked .blocked-icon {
+      font-size: 2.4rem;
+      margin-bottom: 10px;
+    }
+
+    .session-blocked .blocked-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--fg);
+      margin: 0 0 10px;
+    }
+
+    .session-blocked .blocked-body {
+      font-size: 0.88rem;
+      color: var(--fg-dim);
+      line-height: 1.5;
+      margin: 0 0 6px;
+    }
+
+    .session-blocked .blocked-hint {
+      font-size: 0.8rem;
+      color: var(--fg-dim);
+      margin: 0 0 16px;
+    }
+
     .btn-accent {
       background: var(--accent-dim);
       color: var(--accent);
@@ -1117,9 +1154,6 @@
   <script src="controllers/worker/dashboard.ctrl.js"></script>
   <script src="controllers/worker/availability.ctrl.js"></script>
   <script src="controllers/worker/timetable.ctrl.js"></script>
-  <script src="controllers/worker/manage.ctrl.js"></script>
-  <script src="controllers/worker/schedule.ctrl.js"></script>
-  <script src="controllers/worker/settings.ctrl.js"></script>
 
   <script src="controllers/org/register.ctrl.js"></script>
   <script src="controllers/org/login.ctrl.js"></script>
@@ -1127,6 +1161,9 @@
   <script src="controllers/org/dashboard.ctrl.js"></script>
   <script src="controllers/org/add-user.ctrl.js"></script>
   <script src="controllers/org/global-users.ctrl.js"></script>
+  <script src="controllers/org/manage.ctrl.js"></script>
+  <script src="controllers/org/schedule.ctrl.js"></script>
+  <script src="controllers/org/settings.ctrl.js"></script>
 
 </body>
 

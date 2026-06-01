@@ -1,118 +1,91 @@
 <div class="app-layout">
   <nav class="sidebar">
-    <div class="sidebar-brand"><div class="brand-mark"><div class="brand-icon">📅</div><div><div class="brand-name">Timetable</div><div class="brand-sub">Planner</div></div></div></div>
-    <div class="sidebar-user"><div class="user-name">{{user.full_name}}</div><div class="user-role">{{user.role}}</div><div class="user-id">{{user.user_id}}</div></div>
-
-    <!-- Employee sidebar -->
-    <div class="sidebar-nav" ng-if="isEmployee">
-      <div class="nav-section-label">Management</div>
-      <a class="nav-link active" href="#/org/{{orgId}}/u/{{userId}}/dashboard"><span class="nav-icon">⊞</span><span>Dashboard</span></a>
-      <a class="nav-link" href="#/org/{{orgId}}/u/{{userId}}/manage"><span class="nav-icon">👥</span><span>Workers</span></a>
-      <a class="nav-link" href="#/org/{{orgId}}/u/{{userId}}/schedule"><span class="nav-icon">📋</span><span>Timetable</span></a>
-      <div class="nav-section-label" style="margin-top:8px">Organisation</div>
-      <a class="nav-link" href="#/org/{{orgId}}/u/{{userId}}/settings"><span class="nav-icon">⚙</span><span>Settings</span></a>
+    <div class="sidebar-brand">
+      <div class="brand-mark">
+        <div class="brand-icon">📅</div>
+        <div>
+          <div class="brand-name">Timetable</div>
+          <div class="brand-sub">Planner</div>
+        </div>
+      </div>
     </div>
-
-    <!-- Worker sidebar -->
-    <div class="sidebar-nav" ng-if="!isEmployee">
+    <div class="sidebar-user">
+      <div class="user-name">{{user.full_name}}</div>
+      <div class="user-role">{{user.work_type}}</div>
+      <div class="user-id">{{user.user_id}}</div>
+    </div>
+    <div class="sidebar-nav">
       <div class="nav-section-label">My Schedule</div>
-      <a class="nav-link active" href="#/org/{{orgId}}/u/{{userId}}/dashboard"><span class="nav-icon">⊞</span><span>Dashboard</span></a>
-      <a class="nav-link" href="#/org/{{orgId}}/u/{{userId}}/availability"><span class="nav-icon">✓</span><span>My Availability</span></a>
-      <a class="nav-link" href="#/org/{{orgId}}/u/{{userId}}/timetable"><span class="nav-icon">📋</span><span>My Timetable</span></a>
+      <a class="nav-link active" href="#/org/{{orgId}}/u/{{userId}}/dashboard"><span
+          class="nav-icon">⊞</span><span>Dashboard</span></a>
+      <a class="nav-link" href="#/org/{{orgId}}/u/{{userId}}/availability"><span class="nav-icon">✓</span><span>My
+          Availability</span></a>
+      <a class="nav-link" href="#/org/{{orgId}}/u/{{userId}}/timetable"><span class="nav-icon">📋</span><span>My
+          Timetable</span></a>
     </div>
-
-    <div class="sidebar-footer"><button class="btn-logout" ng-click="logout()"><span>⎋</span><span>Sign out</span></button></div>
+    <div class="sidebar-footer"><button class="btn-logout" ng-click="logout()"><span>⎋</span><span>Sign
+          out</span></button></div>
   </nav>
 
   <div class="main-content">
-
-    <!-- ── EMPLOYEE VIEW ─────────────────────────────────────────────────── -->
-    <div ng-if="isEmployee">
-      <div class="page-header">
-        <div>
-          <div class="page-title">Dashboard</div>
-          <div class="page-sub">{{org.name}} &nbsp;·&nbsp; Shop {{(org.shop_open||'').slice(0,5)}} – {{(org.shop_close||'').slice(0,5)}}</div>
-        </div>
-      </div>
-      <div class="page-body">
-        <div ng-if="loading" class="text-dim flex items-center gap-8"><span class="spinner"></span> Loading…</div>
-        <div class="stats-grid" ng-if="!loading">
-          <div class="stat-card"><div class="stat-label">Total Workers</div><div class="stat-value stat-accent">{{stats.total}}</div><div class="stat-sub">{{stats.active}} active</div></div>
-          <div class="stat-card"><div class="stat-label">Full Time</div><div class="stat-value">{{stats.fullTime}}</div><div class="stat-sub">40h/week</div></div>
-          <div class="stat-card"><div class="stat-label">Part Time</div><div class="stat-value">{{stats.partTime}}</div><div class="stat-sub">20h/week</div></div>
-          <div class="stat-card"><div class="stat-label">Mini Job</div><div class="stat-value stat-amber">{{stats.miniJob}}</div><div class="stat-sub">10h/week</div></div>
-        </div>
-        <div class="grid-2 gap-16" ng-if="!loading">
-          <div class="card">
-            <div class="card-header"><div class="card-title">Recent Workers</div>
-              <a href="#/org/{{orgId}}/u/{{userId}}/manage" class="btn btn-sm btn-secondary">View All</a></div>
-            <div class="table-wrap"><table class="data-table">
-              <thead><tr><th>Name</th><th>Type</th><th>Status</th></tr></thead>
-              <tbody>
-                <tr ng-repeat="w in recentWorkers">
-                  <td><div class="fw-600 text-cream">{{w.full_name}}</div><div class="mono text-xs text-dim">{{w.user_id}}</div></td>
-                  <td><span class="badge" ng-class="workTypeBadge(w.work_type)">{{w.work_type}}</span></td>
-                  <td><span class="badge" ng-class="w.is_active?'badge-green':'badge-red'">{{w.is_active?'Active':'Inactive'}}</span></td>
-                </tr>
-                <tr ng-if="!recentWorkers||recentWorkers.length===0"><td colspan="3" class="text-dim text-sm">No workers yet.</td></tr>
-              </tbody>
-            </table></div>
-          </div>
-          <div class="card">
-            <div class="card-header"><div class="card-title">Timetables</div>
-              <a href="#/org/{{orgId}}/u/{{userId}}/schedule" class="btn btn-sm btn-secondary">Manage</a></div>
-            <div class="table-wrap"><table class="data-table">
-              <thead><tr><th>Week</th><th>Shifts</th><th>Status</th></tr></thead>
-              <tbody>
-                <tr ng-repeat="tt in timetables">
-                  <td class="fw-600">{{tt.week_start}}</td>
-                  <td class="text-dim">{{tt.total_shifts}}</td>
-                  <td><span class="badge" ng-class="tt.status==='PUBLISHED'?'badge-published':'badge-draft'">{{tt.status}}</span></td>
-                </tr>
-                <tr ng-if="!timetables||timetables.length===0"><td colspan="3" class="text-dim text-sm">No timetables yet.</td></tr>
-              </tbody>
-            </table></div>
-          </div>
-        </div>
+    <div class="page-header">
+      <div>
+        <div class="page-title">Welcome, {{user.full_name}}</div>
+        <div class="page-sub">{{user.work_type}}&nbsp;·&nbsp;{{user.weekly_hours}}h/week budget</div>
       </div>
     </div>
-
-    <!-- ── WORKER VIEW ───────────────────────────────────────────────────── -->
-    <div ng-if="!isEmployee">
-      <div class="page-header">
-        <div><div class="page-title">Welcome, {{user.full_name}}</div>
-          <div class="page-sub">{{user.work_type}}&nbsp;·&nbsp;{{user.weekly_hours}}h/week budget</div>
+    <div class="page-body">
+      <div ng-if="loading" class="text-dim flex items-center gap-8"><span class="spinner"></span> Loading…</div>
+      <div class="stats-grid" ng-if="!loading">
+        <div class="stat-card">
+          <div class="stat-label">Hours This Week</div>
+          <div class="stat-value stat-accent">{{totalHours}}</div>
+          <div class="stat-sub">of {{user.weekly_hours}}h budget</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Shifts This Week</div>
+          <div class="stat-value">{{myShifts.length}}</div>
+          <div class="stat-sub">scheduled days</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Week</div>
+          <div class="stat-value" style="font-size:16px">{{currentWeek.start}}</div>
+          <div class="stat-sub">to {{currentWeek.end}}</div>
         </div>
       </div>
-      <div class="page-body">
-        <div ng-if="loading" class="text-dim flex items-center gap-8"><span class="spinner"></span> Loading…</div>
-        <div class="stats-grid" ng-if="!loading">
-          <div class="stat-card"><div class="stat-label">Hours This Week</div><div class="stat-value stat-accent">{{totalHours}}</div><div class="stat-sub">of {{user.weekly_hours}}h budget</div></div>
-          <div class="stat-card"><div class="stat-label">Shifts This Week</div><div class="stat-value">{{myShifts.length}}</div><div class="stat-sub">scheduled days</div></div>
-          <div class="stat-card"><div class="stat-label">Week</div><div class="stat-value" style="font-size:16px">{{currentWeek.start}}</div><div class="stat-sub">to {{currentWeek.end}}</div></div>
+      <div class="card" ng-if="!loading">
+        <div class="card-header">
+          <div class="card-title">My Shifts This Week</div>
+          <a href="#/org/{{orgId}}/u/{{userId}}/timetable" class="btn btn-sm btn-secondary">Full Timetable</a>
         </div>
-        <div class="card" ng-if="!loading">
-          <div class="card-header"><div class="card-title">My Shifts This Week</div>
-            <a href="#/org/{{orgId}}/u/{{userId}}/timetable" class="btn btn-sm btn-secondary">Full Timetable</a>
-          </div>
-          <div ng-if="myShifts.length===0" class="card-body text-dim text-sm">No shifts yet. Check back after the timetable is published.</div>
-          <div class="table-wrap" ng-if="myShifts.length>0"><table class="data-table">
-            <thead><tr><th>Day</th><th>Start</th><th>End</th><th>Hours</th></tr></thead>
+        <div ng-if="myShifts.length===0" class="card-body text-dim text-sm">No shifts yet. Check back after the
+          timetable is published.</div>
+        <div class="table-wrap" ng-if="myShifts.length>0">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Day</th>
+                <th>Start</th>
+                <th>End</th>
+                <th>Hours</th>
+              </tr>
+            </thead>
             <tbody>
               <tr ng-repeat="s in myShifts">
                 <td class="fw-600 text-cream">{{s.day_display}}</td>
-                <td>{{s.start_time.slice(0,5)}}</td><td>{{s.end_time.slice(0,5)}}</td>
+                <td>{{s.start_time.slice(0,5)}}</td>
+                <td>{{s.end_time.slice(0,5)}}</td>
                 <td><span class="badge badge-green">{{s.hours}}h</span></td>
               </tr>
             </tbody>
-          </table></div>
-        </div>
-        <div class="alert alert-info" style="margin-top:16px">
-          📌 Submit your availability for next week by <strong>Saturday</strong>.
-          <a href="#/org/{{orgId}}/u/{{userId}}/availability" style="color:inherit;margin-left:6px;text-decoration:underline">Submit now →</a>
+          </table>
         </div>
       </div>
+      <div class="alert alert-info" style="margin-top:16px">
+        📌 Submit your availability for next week by <strong>Saturday</strong>.
+        <a href="#/org/{{orgId}}/u/{{userId}}/availability"
+          style="color:inherit;margin-left:6px;text-decoration:underline">Submit now →</a>
+      </div>
     </div>
-
   </div>
 </div>

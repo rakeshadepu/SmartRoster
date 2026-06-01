@@ -1,6 +1,23 @@
 <div class="login-page">
   <div class="login-card">
 
+
+    <!-- Session conflict: another user is already logged in -->
+    <div ng-if="blocked" class="session-blocked">
+      <div class="blocked-icon">🔒</div>
+      <h2 class="blocked-title">Browser Already In Use</h2>
+      <p class="blocked-body">
+        <strong>{{blockedSession.name}}</strong> is currently logged in on this browser.
+        Only one account can be active at a time.
+      </p>
+      <p class="blocked-hint">Sign out first, then log in with a different account.</p>
+      <button class="btn btn-danger btn-block" ng-click="logoutExisting()">
+        Sign out of {{blockedSession.name}}
+      </button>
+    </div>
+
+    <!-- Login form (hidden when blocked) -->
+    <div ng-if="!blocked">
     <div class="login-brand">
       <div class="login-icon"><i class="fa-solid fa-timeline"></i></div>
       <div class="login-title" ng-if="org">{{org.name}}</div>
@@ -47,6 +64,9 @@
       <br>
       <a href="#/" class="text-xs text-dim" style="margin-top:6px;display:inline-block">← Home</a>
     </div>
+
+  
+    </div><!-- end ng-if !blocked -->
 
   </div>
 </div>

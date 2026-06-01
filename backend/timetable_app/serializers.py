@@ -132,7 +132,7 @@ class WorkTypeLimitSerializer(serializers.ModelSerializer):
 class WorkerListSerializer(serializers.ModelSerializer):
     """
     Read-only serializer for listing workers.
-    Used by the employee on the /api/workers/ GET endpoint.
+    Used by the org admin on the /api/workers/ GET endpoint.
     Also used by the worker login screen to show name list.
     """
     org_name         = serializers.CharField(source='org.name', read_only=True, default=None)
@@ -156,7 +156,7 @@ class WorkerCreateSerializer(serializers.ModelSerializer):
     Employee-only: create a new worker.
 
     On creation the response includes `plain_password` — shown ONCE.
-    The frontend must display this to the employee so they can hand it
+    The frontend must display this to the org admin so they can hand it
     to the worker. It is not stored in plain text after the response.
 
     user_id is auto-generated (Base64url, 11 chars) via signals.py.
@@ -173,7 +173,7 @@ class WorkerCreateSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'user_id', 'plain_password']
 
     def validate(self, data):
-        # Role must be WORKER when created by employee via this endpoint
+        # Role is always WORKER — all JWT users are workers
         data['role'] = User.Role.WORKER
         if not data.get('work_type'):
             raise serializers.ValidationError({'work_type': 'work_type is required for workers.'})
@@ -561,25 +561,23 @@ class OrgLoginSerializer(serializers.Serializer):
 class OrgDetailSerializer(serializers.ModelSerializer):
     """Safe read-only representation of an Organisation (no password)."""
     worker_count   = serializers.SerializerMethodField()
-    employee_count = serializers.SerializerMethodField()
+
     join_url       = serializers.SerializerMethodField()
     login_url      = serializers.SerializerMethodField()
 
     class Meta:
         model  = Organisation
         fields = ['id', 'org_id', 'name', 'email', 'shop_open', 'shop_close',
-                  'is_active', 'created_at', 'worker_count', 'employee_count',
+                  'is_active', 'created_at', 'worker_count',
                   'join_url', 'login_url']
         read_only_fields = fields
 
     def get_worker_count(self, obj):
         return obj.users.filter(role='WORKER', is_active=True).count()
 
-    def get_employee_count(self, obj):
-        return obj.users.filter(role='EMPLOYEE', is_active=True).count()
 
     def get_join_url(self, obj):
-        """URL workers use to join this organisation — sent to them by the employee."""
+        """URL workers use to join this organisation — provided by the org admin."""
         req = self.context.get('request')
         if req:
             host = req.build_absolute_uri('/').rstrip('/')
@@ -595,34 +593,6 @@ class OrgDetailSerializer(serializers.ModelSerializer):
         return f'/#/org/{obj.org_id}/login'
 
 
-class EmployeeCreateSerializer(serializers.ModelSerializer):
-    """
-    Org-admin creates a new Employee account.
-    Returns plain_password once — never stored after this response.
-    """
-    plain_password = serializers.CharField(read_only=True)
-    user_id        = serializers.CharField(read_only=True)
-
-    class Meta:
-        model  = User
-        fields = ['id', 'user_id', 'full_name', 'plain_password', 'is_active']
-        read_only_fields = ['id', 'user_id', 'plain_password']
-
-    def create(self, validated_data):
-        from timetable_app.models import generate_user_id, generate_worker_password
-        emp_password = generate_worker_password(length=12)
-        emp_uid      = generate_user_id()
-        employee = User(
-            full_name    = validated_data['full_name'],
-            role         = User.Role.EMPLOYEE,
-            org          = validated_data['org'],
-            is_staff     = True,
-            plain_password = emp_password,
-        )
-        employee.user_id = emp_uid
-        employee.set_password(emp_password)
-        employee.save()
-        return employee
 
 
 # ---------------------------------------------------------------------------
@@ -630,7 +600,7 @@ class EmployeeCreateSerializer(serializers.ModelSerializer):
 # ---------------------------------------------------------------------------
 class AddUserSerializer(serializers.Serializer):
     """
-    Org-admin creates a new user (EMPLOYEE or WORKER) via the add-user form.
+    Org-admin creates a new worker via the add-user form.
 
     Email and phone are globally unique across ALL organisations.
     If either already exists the serializer returns a clear error.
@@ -646,7 +616,7 @@ class AddUserSerializer(serializers.Serializer):
     email       = serializers.EmailField()
     phone       = serializers.CharField(max_length=20)
     work_type   = serializers.ChoiceField(choices=['FULL_TIME', 'PART_TIME', 'MINIJOB'])
-    role        = serializers.ChoiceField(choices=['EMPLOYEE', 'WORKER'], default='WORKER')
+    role        = serializers.ChoiceField(choices=['WORKER'], default='WORKER')
     nationality = serializers.CharField(max_length=100, required=False, default='')
     dob         = serializers.DateField(required=False, allow_null=True)
     iban        = serializers.CharField(max_length=34, required=False, default='')

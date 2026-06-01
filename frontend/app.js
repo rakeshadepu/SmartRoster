@@ -21,6 +21,12 @@ const ORG_ADMIN_ENDPOINTS = [
   /\/api\/org\/[^/]+\/add-user(\/|$)/,
   /\/api\/org\/[^/]+\/global-users(\/|$)/,
   /\/api\/org\/[^/]+\/logout(\/|$)/,
+  // Org-admin timetable management endpoints
+  /\/api\/org\/[^/]+\/workers(\/|$)/,
+  /\/api\/org\/[^/]+\/settings(\/|$)/,
+  /\/api\/work-limits(\/|$)/,
+  /\/api\/availability(\/|$)/,
+  /\/api\/timetable(\/|$)/,
 ];
 
 function matchesAny(url, patterns) {
@@ -54,7 +60,7 @@ angular
           access: "public",
         })
 
-        // Join/login page for workers & employees
+        // Join/login page for workers
         // Backend: GET /api/org/<org_id>/join/
         // Post-login: /org/<orgId>/u/<userId>/dashboard
         .when("/org/:orgId/join", {
@@ -79,6 +85,21 @@ angular
           controller: "GlobalUsersCtrl",
           access: "org",
         })
+        .when("/org/:orgId/manage", {
+          templateUrl: "views/org/manage.html",
+          controller: "OrgWorkersCtrl",
+          access: "org",
+        })
+        .when("/org/:orgId/schedule", {
+          templateUrl: "views/org/schedule.html",
+          controller: "OrgTimetableCtrl",
+          access: "org",
+        })
+        .when("/org/:orgId/settings", {
+          templateUrl: "views/org/settings.html",
+          controller: "OrgSettingsCtrl",
+          access: "org",
+        })
 
         // Worker / Employee routes — pattern: /org/:orgId/u/:userId/<page>
         .when("/org/:orgId/u/:userId/dashboard", {
@@ -86,16 +107,7 @@ angular
           controller: "WorkerDashboardCtrl",
           access: "worker",
         })
-        .when("/org/:orgId/u/:userId/manage", {
-          templateUrl: "views/worker/manage.html",
-          controller: "WorkersCtrl",
-          access: "employee",
-        })
-        .when("/org/:orgId/u/:userId/settings", {
-          templateUrl: "views/worker/settings.html",
-          controller: "SettingsCtrl",
-          access: "employee",
-        })
+
         .when("/org/:orgId/u/:userId/timetable", {
           templateUrl: "views/worker/timetable.html",
           controller: "WorkerTimetableCtrl",
@@ -105,11 +117,6 @@ angular
           templateUrl: "views/worker/availability.html",
           controller: "AvailabilityCtrl",
           access: "worker",
-        })
-        .when("/org/:orgId/u/:userId/schedule", {
-          templateUrl: "views/worker/schedule.html",
-          controller: "EmployeeTimetableCtrl",
-          access: "employee",
         })
 
         .otherwise({ redirectTo: "/" });
@@ -226,16 +233,7 @@ angular
         var orgId = params.orgId || user.org_slug || "";
         var userId = user.user_id || "";
 
-        if (access === "employee" && user.role !== "EMPLOYEE") {
-          event.preventDefault();
-          $location.path("/org/" + orgId + "/u/" + userId + "/dashboard");
-          return;
-        }
-
-        if (access === "worker" && user.role === "EMPLOYEE") {
-          event.preventDefault();
-          $location.path("/org/" + orgId + "/u/" + userId + "/manage");
-        }
+        // All JWT users are WORKER role — no role-based redirect needed
       });
 
       $rootScope.currentUser = AuthService.getUser();

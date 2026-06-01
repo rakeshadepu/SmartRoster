@@ -14,9 +14,7 @@ angular.module("TimetableApp").controller("HomeCtrl", [
     const user = AuthService.getUser();
     const org = AuthService.getOrg();
     if (user && user.org_slug) {
-      $location.path(
-        `/org/${user.org_slug}/${user.role === "EMPLOYEE" ? "employee" : "worker"}/dashboard`,
-      );
+      $location.path(`/org/${user.org_slug}/u/${user.user_id}/dashboard`);
       return;
     }
     if (org && org.org_id) {

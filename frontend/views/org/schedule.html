@@ -1,18 +1,9 @@
 <div class="app-layout">
-  <nav class="sidebar">
-    <div class="sidebar-brand"><div class="brand-mark"><div class="brand-icon">📅</div><div><div class="brand-name">Timetable</div><div class="brand-sub">Planner</div></div></div></div>
-    <div class="sidebar-user"><div class="user-name">{{user.full_name}}</div><div class="user-role">{{user.role}}</div><div class="user-id">{{user.user_id}}</div></div>
-    <div class="sidebar-nav">
-      <div class="nav-section-label">Management</div>
-      <a class="nav-link " href="#/org/{{orgId}}/u/{{userId}}/dashboard"><span class="nav-icon">⊞</span><span>Dashboard</span></a>
-      <a class="nav-link " href="#/org/{{orgId}}/u/{{userId}}/manage"><span class="nav-icon">👥</span><span>Workers</span></a>
-      <a class="nav-link active" href="#/org/{{orgId}}/u/{{userId}}/schedule"><span class="nav-icon">📋</span><span>Timetable</span></a>
-      <div class="nav-section-label" style="margin-top:8px">Organisation</div>
-      <a class="nav-link " href="#/org/{{orgId}}/u/{{userId}}/settings"><span class="nav-icon">⚙</span><span>Settings</span></a>
-    </div>
-    <div class="sidebar-footer"><button class="btn-logout" ng-click="logout()"><span>⎋</span><span>Sign out</span></button></div>
-  </nav>
+  
+  <!-- Sidebar -->
+  <nav class="sidebar" ng-include="'views/org/templates/sidebar.html'"></nav>
 
+<!-- Main -->
   <div class="main-content">
     <div class="page-header">
       <div>

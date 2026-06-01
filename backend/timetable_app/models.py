@@ -178,7 +178,7 @@ class WorkTypeLimit(models.Model):
 class UserManager(BaseUserManager):
     """
     Custom manager for the User model.
-    Handles creation of workers (by employee) and superusers.
+    Handles creation of workers and superusers.
     """
 
     def create_user(self, user_id, full_name, password=None, **extra_fields):
@@ -194,7 +194,7 @@ class UserManager(BaseUserManager):
     def create_superuser(self, user_id, full_name, password=None, **extra_fields):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
-        extra_fields.setdefault('role', User.Role.EMPLOYEE)
+        extra_fields.setdefault('role', User.Role.WORKER)
         return self.create_user(user_id, full_name, password, **extra_fields)
 
 
@@ -213,23 +213,23 @@ class User(AbstractBaseUser, PermissionsMixin):
         Auto-generated on creation, never editable.
 
     role:
-        EMPLOYEE — manager/admin; full CRUD on workers and timetables.
-        WORKER   — staff member; can only submit availability and view timetable.
+        WORKER — staff member; can submit availability and view their timetable.
+        Organisation management is handled via Org-Token, not a User role.
 
     work_type:
-        Only applies to WORKER role. Determines weekly hour limit via WorkTypeLimit.
+        Determines weekly hour limit via WorkTypeLimit.
 
     plain_password:
         Stored TEMPORARILY (plain text) only during the API response
         when a worker account is first created. After that, it is cleared.
-        This allows the employee to see it once and hand it to the worker.
+        This allows the org admin to see it once and hand it to the worker.
         The actual authentication uses the hashed `password` field.
     """
 
     class Role(models.TextChoices):
-        EMPLOYEE = 'EMPLOYEE', 'Employee (Manager)'
-        WORKER   = 'WORKER',   'Worker'
-        # ADMIN role removed — org owner IS the Organisation, not a User row
+        WORKER = 'WORKER', 'Worker'
+        # Only one role — all JWT-authenticated users are workers.
+        # Organisation management is handled by Org-Token (no User row needed).
 
     class WorkType(models.TextChoices):
         FULL_TIME = 'FULL_TIME', 'Full Time'
@@ -264,7 +264,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     work_type   = models.CharField(
         max_length=20, choices=WorkType.choices,
         blank=True, null=True,
-        help_text='Employment type — relevant for WORKER and EMPLOYEE roles'
+        help_text='Employment type — relevant for WORKER role'
     )
 
     # --- Organisation ---
@@ -299,12 +299,9 @@ class User(AbstractBaseUser, PermissionsMixin):
         return f'[{self.user_id}] {self.full_name} ({self.role})'
 
     @property
-    def is_employee(self):
-        return self.role == self.Role.EMPLOYEE
-
-    @property
     def is_worker(self):
-        return self.role == self.Role.WORKER
+        """All JWT-authenticated users are workers."""
+        return True
 
     def get_weekly_hour_limit(self):
         """

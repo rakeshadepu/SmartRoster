@@ -1,7 +1,5 @@
 <div class="login-page">
-  <div
-    style="text-align: center; max-width: 480px; width: 100%; padding: 0 16px"
-  >
+  <div style="text-align: center; max-width: 480px; width: 100%; padding: 0 16px">
     <div style="margin-bottom: 40px">
       <div class="login-icon" style="margin: 0 auto 16px; color: white">
         <i class="fa-solid fa-timeline"></i>
@@ -13,17 +11,13 @@
     </div>
 
     <!-- Two big action cards -->
-    <div
-      style="
+    <div style="
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 16px;
         margin-bottom: 32px;
-      "
-    >
-      <a
-        href="#/org/register"
-        style="
+      ">
+      <a href="#/org/register" style="
           display: block;
           background: var(--surface);
           border: 1px solid var(--border);
@@ -34,28 +28,23 @@
             border-color 0.15s,
             transform 0.15s;
           cursor: pointer;
-        "
-        onmouseover="
+        " onmouseover="
           this.style.borderColor = 'var(--olive)';
           this.style.transform = 'translateY(-2px)';
-        "
-        onmouseout="
+        " onmouseout="
           this.style.borderColor = 'var(--border)';
           this.style.transform = 'translateY(0)';
-        "
-      >
+        ">
         <div style="font-size: 32px; margin-bottom: 12px; color: white">
           <i class="fa-solid fa-building"></i>
         </div>
-        <div
-          style="
+        <div style="
             font-family: &quot;Syne&quot;, sans-serif;
             font-weight: 700;
             color: var(--cream);
             font-size: 15px;
             margin-bottom: 6px;
-          "
-        >
+          ">
           Register Organisation
         </div>
         <div style="font-size: 12px; color: var(--text-dim); line-height: 1.5">
@@ -63,95 +52,69 @@
         </div>
       </a>
 
-      <div
-        style="
+      <div style="
           background: var(--surface);
           border: 1px solid var(--border);
           border-radius: var(--radius-lg);
           padding: 28px 20px;
-        "
-      >
+        ">
         <div style="font-size: 32px; margin-bottom: 12px; color: white">
           <i class="fa-solid fa-key"></i>
         </div>
-        <div
-          style="
+        <div style="
             font-family: &quot;Syne&quot;, sans-serif;
             font-weight: 700;
             color: var(--cream);
             font-size: 15px;
             margin-bottom: 6px;
-          "
-        >
+          ">
           Organisation Login
         </div>
-        <div
-          style="
+        <div style="
             font-size: 12px;
             color: var(--text-dim);
             line-height: 1.5;
             margin-bottom: 14px;
-          "
-        >
+          ">
           Enter your organisation ID to log in
         </div>
         <div style="display: flex; gap: 8px">
-          <input
-            type="text"
-            class="form-control"
-            ng-model="orgIdInput"
-            placeholder="8-char org ID"
-            style="
+          <input type="text" class="form-control" ng-model="orgIdInput" placeholder="8-char org ID" style="
               flex: 1;
               font-family: monospace;
               font-size: 13px;
               text-transform: uppercase;
-            "
-            ng-keyup="$event.keyCode == 13 && goToOrgLogin()"
-          />
-          <button
-            class="btn btn-primary btn-sm"
-            ng-click="goToOrgLogin()"
-            ng-disabled="!orgIdInput || orgIdInput.length !== 8 || checking"
-          >
-            <span ng-if="checking"
-              ><span
-                class="spinner"
-                style="width: 12px; height: 12px; border-width: 1.5px"
-              ></span
-            ></span>
+            " ng-keyup="$event.keyCode == 13 && goToOrgLogin()" />
+          <button class="btn btn-primary btn-sm" ng-click="goToOrgLogin()"
+            ng-disabled="!orgIdInput || orgIdInput.length !== 8 || checking">
+            <span ng-if="checking"><span class="spinner"
+                style="width: 12px; height: 12px; border-width: 1.5px"></span></span>
             <span ng-if="!checking">Go</span>
           </button>
         </div>
         <div class="text-xs text-dim" style="margin-top: 6px">
           e.g. <span class="mono">aB3-xY7_</span>
         </div>
-        <div
-          class="alert alert-error"
-          ng-if="error"
-          style="margin-top: 8px;margin-bottom: 0px; padding: 8px 12px; font-size: 12px"
-        >
+        <div class="alert alert-error" ng-if="error"
+          style="margin-top: 8px;margin-bottom: 0px; padding: 8px 12px; font-size: 12px">
           ⚠ {{error}}
         </div>
       </div>
     </div>
 
     <!-- Worker / Employee section -->
-    <div
-      style="
+    <div style="
         background: var(--surface);
         border: 1px solid var(--border);
         border-radius: var(--radius-lg);
         padding: 22px 24px;
-      "
-    >
+      ">
       <div style="font-size: 13px; color: var(--text-dim); margin-bottom: 14px">
         <i class="fa-solid fa-user"></i>
         <strong style="color: var(--cream)">Worker or Employee?</strong>
         Your organisation should have sent you a link like:
       </div>
-      <div
-        style="
+      <div style="
           background: var(--bg);
           border: 1px solid var(--border);
           border-radius: var(--radius);
@@ -161,11 +124,8 @@
           color: var(--text-dim);
           margin-bottom: 14px;
           word-break: break-all;
-        "
-      >
-        http://localhost:8080/<span style="color: var(--olive-light)"
-          >#/org/aB3-xY7_/join</span
-        >
+        ">
+        http://localhost:8080/<span style="color: var(--olive-light)">#/org/aB3-xY7_/join</span>
       </div>
       <div style="font-size: 12px; color: var(--text-dim)">
         Use that link directly — or enter your org ID above to find the login

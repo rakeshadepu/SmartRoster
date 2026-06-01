@@ -1,21 +1,20 @@
 'use strict';
 
 /**
- * WorkersCtrl
- * Route: /org/:orgId/u/:userId/manage   (access: employee)
+ * OrgWorkersCtrl
+ * Route: /org/:orgId/manage   (access: org)
  * Manages the worker roster — create, edit, deactivate, reset password.
+ * Authenticated via Org-Token (org admin).
  * Backend URLs: /api/org/<orgId>/workers/  and  /api/org/<orgId>/<workerUserId>/
  */
 angular.module('TimetableApp')
-.controller('WorkersCtrl', ['$scope', '$routeParams', 'AuthService', 'ApiService',
+.controller('OrgWorkersCtrl', ['$scope', '$routeParams', 'AuthService', 'ApiService',
 function($scope, $routeParams, AuthService, ApiService) {
 
   const orgId  = $routeParams.orgId;
-  const userId = $routeParams.userId;   // logged-in employee's user_id (from URL)
 
   $scope.orgId      = orgId;
-  $scope.userId     = userId;
-  $scope.user       = AuthService.getUser();
+  $scope.org        = AuthService.getOrg();
   $scope.workers    = [];
   $scope.loading    = true;
   $scope.error      = null;
@@ -35,7 +34,6 @@ function($scope, $routeParams, AuthService, ApiService) {
     var params = {};
     if ($scope.filter.work_type) params.work_type = $scope.filter.work_type;
     if ($scope.filter.is_active !== '') params.is_active = $scope.filter.is_active;
-    // GET /api/org/<orgId>/workers/
     ApiService.listWorkers(orgId, params).then(function(res) {
       $scope.workers = res.data.workers || [];
     }).catch(function() {
@@ -52,7 +50,6 @@ function($scope, $routeParams, AuthService, ApiService) {
     $scope.error       = null;
     $scope.createdCred = null;
 
-    // POST /api/org/<orgId>/workers/
     ApiService.createWorker(orgId, $scope.newWorker).then(function(res) {
       var w = res.data.worker;
       $scope.createdCred = {
@@ -83,7 +80,6 @@ function($scope, $routeParams, AuthService, ApiService) {
   };
 
   $scope.saveEdit = function() {
-    // PATCH /api/org/<orgId>/<workerUserId>/
     ApiService.updateWorker(orgId, $scope.editWorker.user_id, {
       full_name : $scope.editWorker.full_name,
       work_type : $scope.editWorker.work_type,
@@ -98,7 +94,6 @@ function($scope, $routeParams, AuthService, ApiService) {
 
   $scope.deactivate = function(worker) {
     if (!confirm('Deactivate ' + worker.full_name + '?')) return;
-    // DELETE /api/org/<orgId>/<workerUserId>/
     ApiService.deleteWorker(orgId, worker.user_id).then(function() {
       $scope.success = worker.full_name + ' deactivated.';
       loadWorkers();
@@ -108,7 +103,6 @@ function($scope, $routeParams, AuthService, ApiService) {
 
   $scope.resetPassword = function(worker) {
     if (!confirm('Reset password for ' + worker.full_name + '?')) return;
-    // POST /api/org/<orgId>/<workerUserId>/reset-password/
     ApiService.resetPassword(orgId, worker.user_id).then(function(res) {
       $scope.resetCred = {
         name     : worker.full_name,
@@ -127,5 +121,5 @@ function($scope, $routeParams, AuthService, ApiService) {
     setTimeout(function() { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
   };
 
-  $scope.logout = function() { AuthService.logout(); };
+  $scope.logout = function() { AuthService.orgLogout(orgId); };
 }]);

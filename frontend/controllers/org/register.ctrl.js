@@ -319,9 +319,12 @@ angular.module("TimetableApp").controller("OrgRegisterCtrl", [
       })
         .then(function (res) {
           function buildUrl(path) {
-            const base = window.location.protocol + "//" + window.location.host;
-            return base + (path.startsWith("/") ? path : "/" + path);
+            var frontendBase =
+              window.location.protocol + "//" + window.location.host;
+            var cleanPath = path.replace(/^https?:\/\/[^/]+/, "");
+            return frontendBase + cleanPath;
           }
+
           $scope.created = {
             org: res.data.organisation,
             orgId: res.data.org_id,

@@ -13,8 +13,25 @@
       </div>
     </div>
 
+
+    <!-- Session conflict: another user is already logged in -->
+    <div ng-if="!loading && step === 'blocked'" class="session-blocked">
+      <div class="blocked-icon"><i class="fa-solid fa-user-lock"></i></div>
+      <h2 class="blocked-title">Browser Already In Use</h2>
+      <p class="blocked-body">
+        <strong ng-if="blockedSession.type === 'worker'">{{blockedSession.name}}</strong>
+        <strong ng-if="blockedSession.type === 'org'">{{blockedSession.name}}</strong>
+        is currently logged in on this browser.
+        Only one account can be active at a time.
+      </p>
+      <p class="blocked-hint">Sign out first, then log in with a different account.</p>
+      <button class="btn btn-danger btn-block" ng-click="logoutExisting()">
+        Sign out of {{blockedSession.name}}
+      </button>
+    </div>
+
     <!-- Org loaded -->
-    <div ng-if="!loading && org">
+    <div ng-if="!loading && org && step !== 'blocked'">
 
       <!-- Header -->
       <div class="login-brand">
@@ -52,7 +69,7 @@
           <div>
             <div class="fw-600 text-cream">{{u.full_name}}</div>
             <div class="text-xs text-dim" style="margin-top:2px">
-              <span ng-if="u.role === 'EMPLOYEE'" style="color:var(--accent);font-weight:600">Employee</span>
+
               <span ng-if="u.role === 'WORKER'" style="color:var(--olive-light)">Worker</span>
             </div>
           </div>
@@ -71,7 +88,7 @@
           <div>
             <div class="fw-600 text-cream">{{selectedUser.full_name}}</div>
             <div class="text-xs" style="margin-top:3px">
-              <span ng-if="selectedUser.role === 'EMPLOYEE'" style="color:var(--accent);font-weight:600">Employee</span>
+
               <span ng-if="selectedUser.role === 'WORKER'" style="color:var(--olive-light)">Worker</span>
             </div>
             <div class="mono text-xs text-dim" style="margin-top:2px">

@@ -1,14 +1,30 @@
 <div class="app-layout">
   <nav class="sidebar">
-    <div class="sidebar-brand"><div class="brand-mark"><div class="brand-icon">📅</div><div><div class="brand-name">Timetable</div><div class="brand-sub">Planner</div></div></div></div>
-    <div class="sidebar-user"><div class="user-name">{{user.full_name}}</div><div class="user-role">{{user.role}}</div><div class="user-id">{{user.user_id}}</div></div>
+    <div class="sidebar-brand">
+      <div class="brand-mark">
+        <div class="brand-icon">📅</div>
+        <div>
+          <div class="brand-name">Timetable</div>
+          <div class="brand-sub">Planner</div>
+        </div>
+      </div>
+    </div>
+    <div class="sidebar-user">
+      <div class="user-name">{{user.full_name}}</div>
+      <div class="user-role">{{user.role}}</div>
+      <div class="user-id">{{user.user_id}}</div>
+    </div>
     <div class="sidebar-nav">
       <div class="nav-section-label">My Schedule</div>
-      <a class="nav-link " href="#/org/{{orgId}}/u/{{userId}}/dashboard"><span class="nav-icon">⊞</span><span>Dashboard</span></a>
-      <a class="nav-link " href="#/org/{{orgId}}/u/{{userId}}/availability"><span class="nav-icon">✓</span><span>My Availability</span></a>
-      <a class="nav-link active" href="#/org/{{orgId}}/u/{{userId}}/timetable"><span class="nav-icon">📋</span><span>My Timetable</span></a>
+      <a class="nav-link " href="#/org/{{orgId}}/u/{{userId}}/dashboard"><span
+          class="nav-icon">⊞</span><span>Dashboard</span></a>
+      <a class="nav-link " href="#/org/{{orgId}}/u/{{userId}}/availability"><span class="nav-icon">✓</span><span>My
+          Availability</span></a>
+      <a class="nav-link active" href="#/org/{{orgId}}/u/{{userId}}/timetable"><span class="nav-icon">📋</span><span>My
+          Timetable</span></a>
     </div>
-    <div class="sidebar-footer"><button class="btn-logout" ng-click="logout()"><span>⎋</span><span>Sign out</span></button></div>
+    <div class="sidebar-footer"><button class="btn-logout" ng-click="logout()"><span>⎋</span><span>Sign
+          out</span></button></div>
   </nav>
 
   <div class="main-content">
@@ -33,13 +49,13 @@
         <!-- Week selector -->
         <div style="width:200px;flex-shrink:0">
           <div class="card">
-            <div class="card-header"><div class="card-title">Weeks</div></div>
-            <div ng-repeat="tt in timetables"
-                 ng-click="selectTimetable(tt)"
-                 style="padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s"
-                 ng-style="{ background: selected && selected.id === tt.id ? 'var(--surface2)' : '' }"
-                 onmouseover="this.style.background='var(--surface2)'"
-                 onmouseout="this.style.background=''">
+            <div class="card-header">
+              <div class="card-title">Weeks</div>
+            </div>
+            <div ng-repeat="tt in timetables" ng-click="selectTimetable(tt)"
+              style="padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s"
+              ng-style="{ background: selected && selected.id === tt.id ? 'var(--surface2)' : '' }"
+              onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
               <div class="fw-600 text-cream text-sm">{{tt.week_start}}</div>
               <div class="text-xs text-dim mt-4">Published</div>
             </div>
@@ -72,7 +88,9 @@
 
           <!-- Week grid (personal) -->
           <div class="card">
-            <div class="card-header"><div class="card-title">Weekly Schedule</div></div>
+            <div class="card-header">
+              <div class="card-title">Weekly Schedule</div>
+            </div>
             <div class="tt-grid">
               <table class="tt-table">
                 <thead>
@@ -101,10 +119,11 @@
 
             <!-- Shift detail list -->
             <div style="padding:16px;border-top:1px solid var(--border)" ng-if="myShifts.length > 0">
-              <div class="text-xs text-dim fw-600" style="text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px">Shift Details</div>
+              <div class="text-xs text-dim fw-600"
+                style="text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px">Shift Details</div>
               <div ng-repeat="s in myShifts"
-                   style="display:flex;align-items:center;gap:16px;padding:10px 0;border-bottom:1px solid var(--border)"
-                   ng-if="$last" style="border-bottom:none">
+                style="display:flex;align-items:center;gap:16px;padding:10px 0;border-bottom:1px solid var(--border)"
+                ng-if="$last" style="border-bottom:none">
                 <div style="width:100px" class="fw-600 text-cream">{{s.day_display}}</div>
                 <div class="flex gap-8 items-center">
                   <span class="badge badge-green">{{s.start_time.slice(0,5)}}</span>
@@ -114,8 +133,7 @@
                 <div class="text-dim text-sm">{{s.hours}}h</div>
               </div>
               <!-- Fix — show all rows without ng-if conflict -->
-              <div ng-repeat="s in myShifts"
-                   style="display:flex;align-items:center;gap:16px;padding:10px 0;
+              <div ng-repeat="s in myShifts" style="display:flex;align-items:center;gap:16px;padding:10px 0;
                           border-bottom:1px solid var(--border);">
                 <div style="width:100px" class="fw-600 text-cream">{{s.day_display}}</div>
                 <div class="flex gap-8 items-center">

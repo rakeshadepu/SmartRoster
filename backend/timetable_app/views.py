@@ -1,14 +1,14 @@
 """
-views.py — Timetable Planner Phase 1
+views.py — Timetable Planner
 
 API Views:
-  Auth:         LoginView, LogoutView, RefreshView, MeView
-  Organisation: OrganisationView (GET + PATCH, employee only)
-  WorkLimits:   WorkTypeLimitView (GET + PATCH, employee only)
-  Workers:      WorkerListCreateView, WorkerDetailView (employee only)
+  Auth:         LoginView, LogoutView, RefreshView, MeView (JWT — workers only)
+  Organisation: OrganisationView (GET + PATCH, Org-Token only)
+  WorkLimits:   WorkTypeLimitView (GET + PATCH, Org-Token only)
+  Workers:      WorkerListCreateView, WorkerDetailView (Org-Token only)
   Workers(pub): WorkerPublicListView (unauthenticated — for login screen)
-  Availability: AvailabilityView (POST for workers, GET for employees)
-  Timetable:    TimetableListView, TimetableDetailView (Phase 2 — stubbed)
+  Availability: AvailabilityView (POST/GET for workers via JWT; GET all via Org-Token)
+  Timetable:    TimetableListView, TimetableDetailView, Generate, Publish, PDF, HTML
 """
 
 from django.contrib.auth import logout
@@ -35,11 +35,14 @@ from timetable_app.serializers import (
     ShiftSerializer,
 )
 from timetable_app.permissions import (
-    IsEmployee,
     IsWorker,
-    IsEmployeeOrReadOnly,
-    IsOwnerWorkerOrEmployee,
-    IsSameOrgEmployee,
+    IsOrgAdmin,
+    IsSameOrgWorker,
+    IsOwnerWorkerOrOrgAdmin,
+    IsWorker,
+    IsOrgAdminOrWorker,
+    IsOrgAdminOrEmployee,
+    IsOrgAdminOrReadOnly,
 )
 
 
@@ -50,6 +53,20 @@ def _get_tokens(user):
         'access':  str(refresh.access_token),
         'refresh': str(refresh),
     }
+
+
+def _get_org_from_request(request):
+    """Return the Organisation for the current request.
+
+    Works for both authentication paths:
+    - Org-Token: IsOrgAdminOrWorker sets request.org
+    - JWT Worker: user.org
+    """
+    if hasattr(request, 'org') and request.org:
+        return request.org
+    if request.user and request.user.is_authenticated:
+        return request.user.org
+    return None
 
 
 # ===========================================================================
@@ -155,14 +172,14 @@ class MeView(APIView):
 
 class OrganisationView(APIView):
     """
-    GET  /api/org/<org_id>/settings/  → Employee sees their organisation's details
-    PATCH /api/org/<org_id>/settings/ → Employee updates shop open/close times
+    GET  /api/org/<org_id>/settings/  → Org admin / Employee sees their organisation's details
+    PATCH /api/org/<org_id>/settings/ → Org admin / Employee updates shop open/close times
     org_id URL kwarg is used to verify the token belongs to this org.
     """
-    permission_classes = [IsEmployee]
+    permission_classes = [IsOrgAdminOrEmployee]
 
     def _get_org(self, request, org_id):
-        org = request.user.org
+        org = _get_org_from_request(request)
         if not org:
             return None, Response({'error': 'No organisation assigned to your account.'},
                                   status=status.HTTP_404_NOT_FOUND)
@@ -203,7 +220,7 @@ class WorkTypeLimitListView(APIView):
     GET  /api/work-limits/  → list all hour limits for this org
     POST /api/work-limits/  → create/override a limit for a work type
     """
-    permission_classes = [IsEmployee]
+    permission_classes = [IsOrgAdminOrEmployee]
 
     def get(self, request):
         org = request.user.org
@@ -264,7 +281,7 @@ class WorkerListCreateView(APIView):
     The employee must copy this and hand it to the worker.
     After this response, plain_password is cleared from the DB.
     """
-    permission_classes = [IsEmployee]
+    permission_classes = [IsOrgAdminOrEmployee]
 
     def get(self, request, org_id):
         org = request.user.org
@@ -330,7 +347,7 @@ class WorkerDetailView(APIView):
     PATCH  /api/org/<org_id>/<user_id>/  → update worker (work_type, is_active, full_name)
     DELETE /api/org/<org_id>/<user_id>/  → deactivate (soft delete) worker
     """
-    permission_classes = [IsEmployee]
+    permission_classes = [IsOrgAdminOrEmployee]
 
     def _get_worker(self, org_id, user_id, employee):
         try:
@@ -344,14 +361,14 @@ class WorkerDetailView(APIView):
             return None
 
     def get(self, request, org_id, user_id):
-        worker = self._get_worker(org_id, user_id, request.user)
+        worker = self._get_worker(org_id, user_id, request)
         if not worker:
             return Response({'error': 'Worker not found.'}, status=status.HTTP_404_NOT_FOUND)
         serializer = WorkerListSerializer(worker)
         return Response({'success': True, 'worker': serializer.data})
 
     def patch(self, request, org_id, user_id):
-        worker = self._get_worker(org_id, user_id, request.user)
+        worker = self._get_worker(org_id, user_id, request)
         if not worker:
             return Response({'error': 'Worker not found.'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -367,7 +384,7 @@ class WorkerDetailView(APIView):
                         status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, org_id, user_id):
-        worker = self._get_worker(org_id, user_id, request.user)
+        worker = self._get_worker(org_id, user_id, request)
         if not worker:
             return Response({'error': 'Worker not found.'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -386,13 +403,13 @@ class WorkerResetPasswordView(APIView):
     Employee can reset a worker's password.
     A new random password is generated and returned ONCE.
     """
-    permission_classes = [IsEmployee]
+    permission_classes = [IsOrgAdminOrEmployee]
 
     def post(self, request, org_id, user_id):
         try:
             worker = User.objects.get(
                 user_id=user_id,
-                org=request.user.org,
+                org=_get_org_from_request(request),
                 org__org_id=org_id,
                 role=User.Role.WORKER,
             )
@@ -418,23 +435,23 @@ class WorkerResetPasswordView(APIView):
 
 class AvailabilityView(APIView):
     """
-    GET  /api/availability/  → Employee sees ALL submissions for their org
-                               Worker sees only their OWN submissions
+    GET  /api/availability/  → Org admin sees ALL submissions for their org
+                               Worker (JWT) sees only their OWN submissions
     POST /api/availability/  → Worker submits availability (CREATE ONLY)
 
     Workers CANNOT PUT/PATCH/DELETE their submissions.
-    Only employees can modify via PATCH on AvailabilityDetailView.
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsWorker]
 
     def get(self, request):
-        if request.user.is_employee:
-            # Employee sees all workers in their org
+        if hasattr(request, 'org'):
+            # Org-Token: admin sees all workers in their org
+            org = request.org
             qs = Availability.objects.filter(
-                worker__org=request.user.org
+                worker__org=org
             ).select_related('worker')
         else:
-            # Worker sees only their own
+            # JWT Worker: sees only their own records
             qs = Availability.objects.filter(
                 worker=request.user
             ).select_related('worker')
@@ -448,10 +465,10 @@ class AvailabilityView(APIView):
         return Response({'success': True, 'count': qs.count(), 'availability': serializer.data})
 
     def post(self, request):
-        # Only workers can submit
-        if not request.user.is_worker:
+        # Only JWT-authenticated workers can submit availability (not org-token)
+        if hasattr(request, 'org'):
             return Response(
-                {'error': 'Only workers can submit availability.'},
+                {'error': 'Org admin cannot submit availability directly. Use the worker accounts.'},
                 status=status.HTTP_403_FORBIDDEN,
             )
         serializer = AvailabilitySerializer(
@@ -475,14 +492,13 @@ class AvailabilityDetailView(APIView):
     PATCH  /api/availability/<pk>/  → employee only: modify a record
     DELETE /api/availability/<pk>/  → employee only: remove a record
     """
-    permission_classes = [IsAuthenticated, IsOwnerWorkerOrEmployee]
+    permission_classes = [IsAuthenticated, IsOwnerWorkerOrOrgAdmin]
 
     def _get_object(self, pk, user):
         try:
             obj = Availability.objects.select_related('worker').get(pk=pk)
-            if user.is_employee and obj.worker.org != user.org:
-                return None
-            if user.is_worker and obj.worker != user:
+            # Workers can only access their own availability
+            if obj.worker != user:
                 return None
             return obj
         except Availability.DoesNotExist:
@@ -495,28 +511,18 @@ class AvailabilityDetailView(APIView):
         return Response({'success': True, 'availability': AvailabilitySerializer(obj).data})
 
     def patch(self, request, pk):
-        if not request.user.is_employee:
-            return Response(
-                {'error': 'Workers cannot modify availability records.'},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-        obj = self._get_object(pk, request.user)
-        if not obj:
-            return Response({'error': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
-        serializer = AvailabilitySerializer(obj, data=request.data, partial=True,
-                                            context={'request': request})
-        if serializer.is_valid():
-            serializer.save()
-            return Response({'success': True, 'availability': serializer.data})
-        return Response({'success': False, 'errors': serializer.errors},
-                        status=status.HTTP_400_BAD_REQUEST)
+        # Workers can only view their own availability, not modify it.
+        return Response(
+            {'error': 'Workers cannot modify availability records.'},
+            status=status.HTTP_403_FORBIDDEN,
+        )
 
     def delete(self, request, pk):
-        if not request.user.is_employee:
-            return Response(
-                {'error': 'Workers cannot delete availability records.'},
-                status=status.HTTP_403_FORBIDDEN,
-            )
+        # Workers cannot delete availability records.
+        return Response(
+            {'error': 'Workers cannot delete availability records.'},
+            status=status.HTTP_403_FORBIDDEN,
+        )
         obj = self._get_object(pk, request.user)
         if not obj:
             return Response({'error': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
@@ -533,13 +539,14 @@ class TimetableListView(APIView):
     GET  /api/timetable/           → list timetables (both roles)
     POST /api/timetable/generate/  → generate timetable (employee only) — Phase 2
     """
-    permission_classes = [IsEmployeeOrReadOnly]
+    permission_classes = [IsOrgAdminOrReadOnly]
 
     def get(self, request):
-        if request.user.is_employee:
-            qs = Timetable.objects.filter(org=request.user.org).prefetch_related('shifts')
+        if hasattr(request, 'org'):
+            # Org-Token: see all timetables (draft + published)
+            qs = Timetable.objects.filter(org=request.org).prefetch_related('shifts')
         else:
-            # Workers see only PUBLISHED timetables for their org
+            # JWT Worker: only see PUBLISHED timetables for their org
             qs = Timetable.objects.filter(
                 org=request.user.org,
                 status=Timetable.Status.PUBLISHED,
@@ -554,17 +561,18 @@ class TimetableDetailView(APIView):
     GET   /api/timetable/<pk>/  → view timetable (both roles)
     PATCH /api/timetable/<pk>/  → employee edits (Phase 2)
     """
-    permission_classes = [IsEmployeeOrReadOnly]
+    permission_classes = [IsOrgAdminOrReadOnly]
 
     def get(self, request, pk):
         try:
             timetable = Timetable.objects.prefetch_related('shifts__worker').get(
-                pk=pk, org=request.user.org
+                pk=pk, org=_get_org_from_request(request)
             )
         except Timetable.DoesNotExist:
             return Response({'error': 'Timetable not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-        if request.user.is_worker and timetable.status != Timetable.Status.PUBLISHED:
+        # JWT workers can only view PUBLISHED timetables
+        if not hasattr(request, 'org') and timetable.status != Timetable.Status.PUBLISHED:
             return Response({'error': 'Timetable not yet published.'},
                             status=status.HTTP_403_FORBIDDEN)
 
@@ -597,13 +605,13 @@ class TimetableGenerateView(APIView):
 
     Returns the generated timetable with all shifts and a summary.
     """
-    permission_classes = [IsEmployee]
+    permission_classes = [IsOrgAdminOrEmployee]
 
     def post(self, request):
         from timetable_app.scheduler import generate_timetable
         import datetime
 
-        org = request.user.org
+        org = _get_org_from_request(request)
         if not org:
             return Response({'error': 'No organisation assigned to your account.'},
                             status=status.HTTP_400_BAD_REQUEST)
@@ -647,11 +655,11 @@ class TimetablePublishView(APIView):
     Employee publishes a DRAFT timetable, making it visible to workers.
     Cannot un-publish — contact admin to revert.
     """
-    permission_classes = [IsEmployee]
+    permission_classes = [IsOrgAdminOrEmployee]
 
     def post(self, request, pk):
         try:
-            timetable = Timetable.objects.get(pk=pk, org=request.user.org)
+            timetable = Timetable.objects.get(pk=pk, org=_get_org_from_request(request))
         except Timetable.DoesNotExist:
             return Response({'error': 'Timetable not found.'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -682,13 +690,13 @@ class TimetableShiftEditView(APIView):
       - shift duration <= 8 hours
       - worker weekly total still within budget after edit
     """
-    permission_classes = [IsEmployee]
+    permission_classes = [IsOrgAdminOrEmployee]
 
     def patch(self, request, pk, shift_pk):
         import datetime
 
         try:
-            timetable = Timetable.objects.get(pk=pk, org=request.user.org)
+            timetable = Timetable.objects.get(pk=pk, org=_get_org_from_request(request))
         except Timetable.DoesNotExist:
             return Response({'error': 'Timetable not found.'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -699,7 +707,7 @@ class TimetableShiftEditView(APIView):
         except Shift.DoesNotExist:
             return Response({'error': 'Shift not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-        org = request.user.org
+        org = _get_org_from_request(request)
 
         # Parse incoming times
         def parse_time(val):
@@ -771,11 +779,11 @@ class TimetableShiftDeleteView(APIView):
 
     Employee removes an individual shift from a timetable.
     """
-    permission_classes = [IsEmployee]
+    permission_classes = [IsOrgAdminOrEmployee]
 
     def delete(self, request, pk, shift_pk):
         try:
-            timetable = Timetable.objects.get(pk=pk, org=request.user.org)
+            timetable = Timetable.objects.get(pk=pk, org=_get_org_from_request(request))
         except Timetable.DoesNotExist:
             return Response({'error': 'Timetable not found.'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -847,7 +855,7 @@ class TimetablePDFView(APIView):
     Streams the timetable as a downloadable PDF.
     Available to both employees and workers (workers: published only).
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsOrgAdminOrReadOnly]
 
     def get(self, request, pk):
         from django.http import HttpResponse
@@ -856,11 +864,11 @@ class TimetablePDFView(APIView):
         try:
             timetable = Timetable.objects.prefetch_related(
                 'shifts__worker'
-            ).get(pk=pk, org=request.user.org)
+            ).get(pk=pk, org=_get_org_from_request(request))
         except Timetable.DoesNotExist:
             return Response({'error': 'Timetable not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-        if request.user.is_worker and timetable.status != Timetable.Status.PUBLISHED:
+        if not hasattr(request, 'org') and timetable.status != Timetable.Status.PUBLISHED:
             return Response({'error': 'Timetable not yet published.'},
                             status=status.HTTP_403_FORBIDDEN)
 
@@ -887,7 +895,7 @@ class TimetableHTMLView(APIView):
     Used for the digital (screen) timetable view in the AngularJS frontend.
     Both roles, published-only for workers.
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsOrgAdminOrReadOnly]
 
     def get(self, request, pk):
         from django.http import HttpResponse
@@ -1172,9 +1180,9 @@ class OrgUpdateView(APIView):
 
 class OrgEmployeeListCreateView(APIView):
     """
-    GET  /api/org/<org_id>/employees/  — list employees
-    POST /api/org/<org_id>/employees/  — create employee (returns plain_password once)
-    Org-Token required.
+    GET  /api/org/<org_id>/employees/  — list workers
+    POST /api/org/<org_id>/employees/  — create worker (returns plain_password once)
+    Org-Token required. URL kept as /employees/ for backward compatibility with frontend.
     """
     from timetable_app.permissions import IsOrgAdmin
     permission_classes = [IsOrgAdmin]
@@ -1183,7 +1191,7 @@ class OrgEmployeeListCreateView(APIView):
         org = request.org
         if org.org_id != org_id:
             return Response({'error': 'Token mismatch.'}, status=status.HTTP_403_FORBIDDEN)
-        employees = User.objects.filter(org=org, role=User.Role.EMPLOYEE)
+        employees = User.objects.filter(org=org, role=User.Role.WORKER)
         return Response({
             'success'  : True,
             'count'    : employees.count(),
@@ -1191,7 +1199,7 @@ class OrgEmployeeListCreateView(APIView):
         })
 
     def post(self, request, org_id):
-        from timetable_app.serializers import EmployeeCreateSerializer
+        from timetable_app.models import generate_user_id, generate_worker_password
         org = request.org
         if org.org_id != org_id:
             return Response({'error': 'Token mismatch.'}, status=status.HTTP_403_FORBIDDEN)
@@ -1201,33 +1209,37 @@ class OrgEmployeeListCreateView(APIView):
             return Response({'error': 'full_name is required.'},
                             status=status.HTTP_400_BAD_REQUEST)
 
-        serializer = EmployeeCreateSerializer(data={'full_name': full_name})
-        if serializer.is_valid():
-            employee  = serializer.save(org=org)
-            plain_pwd = employee.plain_password
-            User.objects.filter(pk=employee.pk).update(plain_password=None)
-            return Response({
-                'success': True,
-                'message': f'Employee "{employee.full_name}" created. Save credentials — shown once.',
-                'employee': {
-                    'id'            : employee.pk,
-                    'full_name'     : employee.full_name,
-                    'user_id'       : employee.user_id,
-                    'plain_password': plain_pwd,
-                    'role'          : 'EMPLOYEE',
-                    'org'           : org.pk,
-                    'login_url'     : request.build_absolute_uri(f'/#/org/{org_id}/login'),
-                },
-            }, status=status.HTTP_201_CREATED)
+        plain_pwd = generate_worker_password(length=12)
+        worker = User(
+            full_name      = full_name,
+            role           = User.Role.WORKER,
+            org            = org,
+            plain_password = plain_pwd,
+        )
+        worker.user_id = generate_user_id()
+        worker.set_password(plain_pwd)
+        worker.save()
+        User.objects.filter(pk=worker.pk).update(plain_password=None)
 
-        return Response({'success': False, 'errors': serializer.errors},
-                        status=status.HTTP_400_BAD_REQUEST)
+        return Response({
+            'success': True,
+            'message': f'Worker "{worker.full_name}" created. Save credentials — shown once.',
+            'employee': {
+                'id'            : worker.pk,
+                'full_name'     : worker.full_name,
+                'user_id'       : worker.user_id,
+                'plain_password': plain_pwd,
+                'role'          : 'WORKER',
+                'org'           : org.pk,
+                'login_url'     : request.build_absolute_uri(f'/#/org/{org_id}/join'),
+            },
+        }, status=status.HTTP_201_CREATED)
 
 
 class OrgEmployeeDetailView(APIView):
     """
-    PATCH  /api/org/<org_id>/employees/<pk>/
-    DELETE /api/org/<org_id>/employees/<pk>/
+    PATCH  /api/org/<org_id>/employees/<pk>/  — update worker
+    DELETE /api/org/<org_id>/employees/<pk>/  — deactivate worker
     Org-Token required.
     """
     from timetable_app.permissions import IsOrgAdmin
@@ -1235,7 +1247,7 @@ class OrgEmployeeDetailView(APIView):
 
     def _get_emp(self, pk, org):
         try:
-            return User.objects.get(pk=pk, org=org, role=User.Role.EMPLOYEE)
+            return User.objects.get(pk=pk, org=org, role=User.Role.WORKER)
         except User.DoesNotExist:
             return None
 
@@ -1276,7 +1288,7 @@ class OrgEmployeeResetPasswordView(APIView):
         if org.org_id != org_id:
             return Response({'error': 'Token mismatch.'}, status=status.HTTP_403_FORBIDDEN)
         try:
-            emp = User.objects.get(pk=pk, org=org, role=User.Role.EMPLOYEE)
+            emp = User.objects.get(pk=pk, org=org, role=User.Role.WORKER)
         except User.DoesNotExist:
             return Response({'error': 'Employee not found.'}, status=status.HTTP_404_NOT_FOUND)
         new_pw = generate_worker_password(length=12)

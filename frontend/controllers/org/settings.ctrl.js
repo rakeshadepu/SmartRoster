@@ -1,22 +1,20 @@
 'use strict';
 
 /**
- * SettingsCtrl
- * Route: /org/:orgId/u/:userId/settings   (access: employee)
+ * OrgSettingsCtrl
+ * Route: /org/:orgId/settings   (access: org)
  * Manages shop hours and work type weekly hour limits.
+ * Authenticated via Org-Token (org admin).
  * Backend URLs: /api/org/<orgId>/settings/  and  /api/work-limits/
  */
 angular.module('TimetableApp')
-.controller('SettingsCtrl', ['$scope', '$routeParams', 'AuthService', 'ApiService',
+.controller('OrgSettingsCtrl', ['$scope', '$routeParams', 'AuthService', 'ApiService',
 function($scope, $routeParams, AuthService, ApiService) {
 
   const orgId  = $routeParams.orgId;
-  const userId = $routeParams.userId;
 
   $scope.orgId      = orgId;
-  $scope.userId     = userId;
-  $scope.user       = AuthService.getUser();
-  $scope.org        = null;
+  $scope.org        = AuthService.getOrg();
   $scope.limits     = [];
   $scope.loading    = true;
   $scope.saving     = false;
@@ -26,7 +24,6 @@ function($scope, $routeParams, AuthService, ApiService) {
   $scope.limitsForm = { FULL_TIME: 40, PART_TIME: 20, MINIJOB: 10 };
 
   function load() {
-    // GET /api/org/<orgId>/settings/
     ApiService.getOrg(orgId).then(function(res) {
       $scope.org = res.data.organisation;
       $scope.shopForm.shop_open  = ($scope.org.shop_open  || '').slice(0, 5);
@@ -44,7 +41,6 @@ function($scope, $routeParams, AuthService, ApiService) {
     $scope.saving  = true;
     $scope.error   = null;
     $scope.success = null;
-    // PATCH /api/org/<orgId>/settings/
     ApiService.updateOrg(orgId, $scope.shopForm).then(function(res) {
       $scope.org     = res.data.organisation;
       $scope.success = 'Shop hours updated.';
@@ -71,5 +67,5 @@ function($scope, $routeParams, AuthService, ApiService) {
     });
   };
 
-  $scope.logout = function() { AuthService.logout(); };
+  $scope.logout = function() { AuthService.orgLogout(orgId); };
 }]);

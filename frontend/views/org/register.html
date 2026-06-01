@@ -27,16 +27,16 @@
         </div>
         <div class="credential-row">
           <div>
-            <div class="credential-label">Employee / Worker Join Link</div>
+            <div class="credential-label">Employee Join Link</div>
             <div style="font-size:11px;color:var(--olive-light);word-break:break-all">{{created.joinUrl}}</div>
-            <div class="text-xs text-dim" style="margin-top:2px">Send this link to employees and workers</div>
+            <div class="text-xs text-dim" style="margin-top:2px">Send this link to workers.</div>
           </div>
           <button class="credential-copy" ng-click="copyText(created.joinUrl, $event)">Copy</button>
         </div>
       </div>
       <!-- <div class="alert alert-info" style="font-size:12px;margin:14px 0">
         ℹ You (the owner) log in with your <strong>email + password</strong> or <strong>Org ID + password</strong>.
-        Use <strong>Add User</strong> on your dashboard to create employee and worker accounts.
+        Use <strong>Add User</strong> on your dashboard to create worker accounts.
       </div> -->
       <div class="flex gap-8" style="text-align: center;">
         <button class="btn btn-primary btn-full" ng-click="goToDashboard()">Go to Org Login →</button>
@@ -57,7 +57,7 @@
         <label class="form-label">Owner / Manager Full Name *</label>
         <input type="text" class="form-control" ng-model="form.owner_name" placeholder="e.g. Maria Schmidt" />
         <div class="form-hint">
-          This person will also be the first employee account.
+          Register your organisation to get started.
         </div>
       </div>
 

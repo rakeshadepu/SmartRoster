@@ -1,20 +1,19 @@
 'use strict';
 
 /**
- * EmployeeTimetableCtrl
- * Route: /org/:orgId/u/:userId/schedule   (access: employee)
+ * OrgTimetableCtrl
+ * Route: /org/:orgId/schedule   (access: org)
  * Generates, edits and publishes weekly timetables.
+ * Authenticated via Org-Token (org admin).
  */
 angular.module('TimetableApp')
-.controller('EmployeeTimetableCtrl', ['$scope', '$sce', '$routeParams', 'AuthService', 'ApiService',
+.controller('OrgTimetableCtrl', ['$scope', '$sce', '$routeParams', 'AuthService', 'ApiService',
 function($scope, $sce, $routeParams, AuthService, ApiService) {
 
   const orgId  = $routeParams.orgId;
-  const userId = $routeParams.userId;
 
   $scope.orgId      = orgId;
-  $scope.userId     = userId;
-  $scope.user       = AuthService.getUser();
+  $scope.org        = AuthService.getOrg();
   $scope.timetables = [];
   $scope.selected   = null;
   $scope.loading    = true;
@@ -30,7 +29,7 @@ function($scope, $sce, $routeParams, AuthService, ApiService) {
   $scope.editShiftModal = false;
   $scope.editShift      = {};
 
-  const DAYS      = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
+  const DAYS       = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
   const DAY_LABELS = { MON:'Mon',TUE:'Tue',WED:'Wed',THU:'Thu',FRI:'Fri',SAT:'Sat',SUN:'Sun' };
   $scope.days     = DAYS;
   $scope.dayLabel = function(d) { return DAY_LABELS[d] || d; };
@@ -111,8 +110,8 @@ function($scope, $sce, $routeParams, AuthService, ApiService) {
   $scope.downloadPdf = function() {
     if (!$scope.selected) return;
     var url   = ApiService.pdfUrl($scope.selected.id);
-    var token = localStorage.getItem('access_token');
-    fetch(url, { headers: { Authorization: 'Bearer ' + token } })
+    var token = localStorage.getItem('org_token');
+    fetch(url, { headers: { Authorization: 'Org-Token ' + token } })
       .then(function(r) { return r.blob(); })
       .then(function(blob) {
         var a      = document.createElement('a');
@@ -155,5 +154,5 @@ function($scope, $sce, $routeParams, AuthService, ApiService) {
     }).catch(function() { $scope.error = 'Delete failed.'; });
   };
 
-  $scope.logout = function() { AuthService.logout(); };
+  $scope.logout = function() { AuthService.orgLogout(orgId); };
 }]);

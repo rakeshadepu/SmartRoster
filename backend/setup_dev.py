@@ -73,38 +73,11 @@ for wt, hrs in LIMITS:
 
 
 # ---------------------------------------------------------------------------
-# 3. Employee Account
+# 3. Organisation Admin note (no User row needed)
 # ---------------------------------------------------------------------------
-print_section('Creating Employee Account')
-emp_password = 'Employee@123'
-
-if not User.objects.filter(role='EMPLOYEE', org=org).exists():
-    emp_uid = generate_user_id()
-    validate_user_id(emp_uid)
-    employee = User.objects.create_user(
-        user_id=emp_uid,
-        full_name='Admin Employee',
-        password=emp_password,
-        role=User.Role.EMPLOYEE,
-        org=org,
-        is_staff=True,
-    )
-    print(f'  Created Employee: {employee.full_name}')
-else:
-    employee = User.objects.filter(role='EMPLOYEE', org=org).first()
-    emp_uid  = employee.user_id
-    print(f'  Found existing Employee: {employee.full_name}')
-
-print(f'\n  ┌── EMPLOYEE LOGIN CREDENTIALS ──────────────────┐')
-print(f'  │  user_id  : {emp_uid:<38}│')
-print(f'  │  password : {emp_password:<38}│')
-print(f'  │  role     : EMPLOYEE (full access)             │')
-print(f'  └────────────────────────────────────────────────┘')
-
-# Validate Base64url format
-validate_user_id(emp_uid)
-print(f'\n  ✅ user_id "{emp_uid}" passes Base64url validation')
-print(f'     Length: {len(emp_uid)} chars | Alphabet: A-Z, a-z, 0-9, -, _')
+print_section('Organisation Admin')
+print(f'  Organisation management is done via Org-Token — no EMPLOYEE user row.')
+print(f'  Log in at: /#/org/{org.org_id}/login  (use the org email + password)')
 
 
 # ---------------------------------------------------------------------------
@@ -156,7 +129,7 @@ print(f'  Organisation  : {org.name}')
 print(f'  Shop hours    : {org.shop_open} – {org.shop_close}')
 print(f'  Total users   : {User.objects.filter(org=org).count()}')
 print(f'  Workers       : {User.objects.filter(org=org, role="WORKER").count()}')
-print(f'  Employees     : {User.objects.filter(org=org, role="EMPLOYEE").count()}')
+print(f'  Workers       : {User.objects.filter(org=org, role="WORKER").count()} (total)')
 
 print('\n  Hour Limits:')
 for wt, hrs in LIMITS:
