@@ -148,6 +148,12 @@ angular.module("TimetableApp").controller("OrgDashboardCtrl", [
       $scope.editEmployee = {};
     };
 
+     $scope.testClose = function () {
+       // console.log("close clicked");
+       $scope.showCreateForm = false;
+     };
+
+
     $scope.closeResetModal = function () {
       $scope.resetModal = false;
       $scope.resetCred = null;

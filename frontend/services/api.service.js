@@ -25,8 +25,7 @@ angular.module("TimetableApp").service("ApiService", [
 
     // ── Org admin (Org-Token) ─────────────────────────────────────────────
 
-    this.orgMe = (orgId) =>
-      $http.get(`${B}/org/${orgId}/me/`);
+    this.orgMe = (orgId) => $http.get(`${B}/org/${orgId}/me/`);
 
     this.orgUpdate = function (orgId, data) {
       return $http({
@@ -47,8 +46,7 @@ angular.module("TimetableApp").service("ApiService", [
 
     // ── Organisation settings ─────────────────────────────────────────────
 
-    this.getOrg = (orgId) =>
-      $http.get(`${B}/org/${orgId}/settings/`);
+    this.getOrg = (orgId) => $http.get(`${B}/org/${orgId}/settings/`);
 
     this.updateOrg = function (orgId, data) {
       return $http({
@@ -91,10 +89,7 @@ angular.module("TimetableApp").service("ApiService", [
 
     // Reset password
     this.resetPassword = (orgId, userId) =>
-      $http.post(
-        `${B}/org/${orgId}/workers/${userId}/reset-password/`,
-        {}
-      );
+      $http.post(`${B}/org/${orgId}/workers/${userId}/reset-password/`, {});
 
     // Add user + global search (Org-Token)
     this.orgAddUser = (orgId, data) =>
@@ -182,5 +177,16 @@ angular.module("TimetableApp").service("ApiService", [
         transformResponse: [(d) => d],
       });
     this.pdfUrl = (pk) => `${B}/timetable/${pk}/pdf/`;
-  },
+    this.getEmailConflicts = (orgId) =>
+      $http.get(`${B}/org/${orgId}/email-conflicts/`);
+
+    this.updateWorkerEmail = function (orgId, userId, email) {
+      return $http({
+        method: "PATCH",
+        url: `${B}/org/${orgId}/workers/${userId}/`,
+        email: { email },
+      });
+
+    }
+  }
 ]);

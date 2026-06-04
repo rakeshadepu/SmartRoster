@@ -90,19 +90,63 @@ class OrganisationSerializer(serializers.ModelSerializer):
 
 
 class OrganisationUpdateSerializer(serializers.ModelSerializer):
-    """Organisation admin-only: update shop open/close times."""
+    """
+    Organisation admin: update name, email, password, and/or shop hours.
+    Email uniqueness is enforced globally across both Organisation and User tables.
+    """
+    password = serializers.CharField(min_length=8, write_only=True, required=False,
+                                     style={"input_type": "password"})
+
     class Meta:
         model  = Organisation
-        fields = ['shop_open', 'shop_close']
+        fields = ["name", "email", "password", "shop_open", "shop_close"]
+        extra_kwargs = {
+            "name":       {"required": False},
+            "email":      {"required": False},
+            "shop_open":  {"required": False},
+            "shop_close": {"required": False},
+        }
+
+    def validate_email(self, value):
+        value = value.lower()
+        qs = Organisation.objects.filter(email__iexact=value)
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError(
+                "Another organisation is already using this email address."
+            )
+        if User.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError(
+                "This email is already assigned to a worker account."
+            )
+        return value
+
+    def validate_name(self, value):
+        qs = Organisation.objects.filter(name__iexact=value)
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError(
+                "An organisation with this name already exists."
+            )
+        return value
 
     def validate(self, data):
-        open_t  = data.get('shop_open',  self.instance.shop_open  if self.instance else None)
-        close_t = data.get('shop_close', self.instance.shop_close if self.instance else None)
+        open_t  = data.get("shop_open",  self.instance.shop_open  if self.instance else None)
+        close_t = data.get("shop_close", self.instance.shop_close if self.instance else None)
         if open_t and close_t and open_t >= close_t:
-            raise serializers.ValidationError(
-                'shop_open must be earlier than shop_close.'
-            )
+            raise serializers.ValidationError("shop_open must be earlier than shop_close.")
         return data
+
+    def update(self, instance, validated_data):
+        password = validated_data.pop("password", None)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        if password:
+            instance.set_password(password)
+        instance.save()
+        return instance
 
 
 # ---------------------------------------------------------------------------
@@ -199,14 +243,36 @@ class WorkerCreateSerializer(serializers.ModelSerializer):
 
 
 class WorkerUpdateSerializer(serializers.ModelSerializer):
-    """Employee-only: update a worker's work_type or active status."""
+    """Employee-only: update a worker's work_type, active status, or email."""
     class Meta:
         model  = User
-        fields = ['full_name', 'work_type', 'is_active']
+        fields = ['full_name', 'work_type', 'is_active', 'email']
+        extra_kwargs = {
+            'email': {'required': False, 'allow_null': True, 'allow_blank': True},
+        }
 
     def validate_work_type(self, value):
         if value not in [c[0] for c in User.WorkType.choices]:
             raise serializers.ValidationError('Invalid work_type.')
+        return value
+
+    def validate_email(self, value):
+        if not value:
+            return value
+        value = value.lower()
+        # Exclude current instance from uniqueness check
+        qs = User.objects.filter(email__iexact=value)
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError(
+                'This email is already assigned to another worker account.'
+            )
+        # Global uniqueness: cannot reuse an Organisation email for a Worker
+        if Organisation.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError(
+                'This email is already assigned to an organisation account.'
+            )
         return value
 
 
@@ -419,6 +485,11 @@ class OrgRegisterSerializer(serializers.ModelSerializer):
         if Organisation.objects.filter(email__iexact=value).exists():
             raise serializers.ValidationError(
                 'An organisation with this email already exists.'
+            )
+        # Global uniqueness: cannot reuse a Worker's email for an Organisation
+        if User.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError(
+                'This email is already assigned to a worker account and cannot be used for an organisation.'
             )
         return value
 
@@ -633,6 +704,11 @@ class AddUserSerializer(serializers.Serializer):
         if U.objects.filter(email__iexact=value).exists():
             raise serializers.ValidationError(
                 'A user with this email already exists in another organisation.'
+            )
+        # Global uniqueness: cannot reuse an Organisation email for a Worker
+        if Organisation.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError(
+                'This email is already assigned to an organisation account and cannot be used for a worker.'
             )
         return value.lower()
 

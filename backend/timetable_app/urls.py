@@ -51,6 +51,10 @@ urlpatterns = [
          views.AddUserView.as_view(),
          name='org-add-user'),
 
+    path('org/<str:org_id>/email-conflicts/',
+         views.EmailConflictView.as_view(),
+         name='org-email-conflicts'),
+
     path('org/<str:org_id>/global-users/',
          views.GlobalUserSearchView.as_view(),
          name='org-global-users'),

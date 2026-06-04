@@ -309,13 +309,7 @@ class WorkerListCreateView(APIView):
             return Response({'error': 'Organisation mismatch or not found.'},
                             status=status.HTTP_403_FORBIDDEN)
 
-        print("REQUEST ORG:", org)
-        print("ORG ID URL:", org_id)
-
         qs = User.objects.filter(org=org, role=User.Role.WORKER)
-
-        print("TOTAL WORKERS:", User.objects.filter(role=User.Role.WORKER).count())
-        print("ORG WORKERS:", qs.count())
 
         # Optional filters
         work_type = request.query_params.get('work_type')
@@ -378,7 +372,7 @@ class WorkerDetailView(APIView):
     """
     permission_classes = [IsOrgAdmin]
 
-    def _get_worker(self, org_id, user_id, employee):
+    def _get_worker(self, org_id, user_id, request):
         org = _get_org_from_request(request)
 
         if not org:
@@ -387,7 +381,7 @@ class WorkerDetailView(APIView):
             return User.objects.get(
                 user_id=user_id,
                 role=User.Role.WORKER,
-                org=employee.org,
+                org=org,
                 org__org_id=org_id,
             )
         except User.DoesNotExist:
@@ -1252,3 +1246,52 @@ class GlobalUserSearchView(APIView):
                              'message': 'No user found with that email or mobile number.'})
 
         return Response({'success': True, 'user': GlobalUserSearchSerializer(user).data})
+
+
+# ===========================================================================
+# EMAIL CONFLICT DETECTION
+# ===========================================================================
+class EmailConflictView(APIView):
+    """
+    GET /api/org/<org_id>/email-conflicts/
+    Returns workers whose email is also used by an Organisation account.
+    Org-Token required.
+    """
+    permission_classes = [IsOrgAdmin]
+
+    def get(self, request, org_id):
+        org = request.org
+        if org.org_id != org_id:
+            return Response({'error': 'Token mismatch.'}, status=status.HTTP_403_FORBIDDEN)
+
+        # Find all organisation emails
+        org_emails = set(
+            Organisation.objects.values_list('email', flat=True)
+        )
+        org_emails = {e.lower() for e in org_emails if e}
+
+        # Find workers in this org whose email is in org_emails
+        conflicts = User.objects.filter(
+            org=org,
+            email__isnull=False,
+        ).exclude(email='')
+
+        conflict_list = []
+        for worker in conflicts:
+            if worker.email and worker.email.lower() in org_emails:
+                conflict_list.append({
+                    'user_id'   : worker.user_id,
+                    'full_name' : worker.full_name,
+                    'email'     : worker.email,
+                    'message'   : (
+                        f'Email conflict detected. Worker {worker.full_name} ({worker.user_id}) '
+                        f'uses an email already assigned to an Organisation account. '
+                        f"Please update the worker's email address."
+                    ),
+                })
+
+        return Response({
+            'success'   : True,
+            'conflicts' : conflict_list,
+            'count'     : len(conflict_list),
+        })

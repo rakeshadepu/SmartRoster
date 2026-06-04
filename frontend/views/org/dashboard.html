@@ -13,11 +13,14 @@
           Shop {{(org.shop_open || '').slice(0,5)}} – {{(org.shop_close || '').slice(0,5)}}
         </div>
       </div>
-      <div class="flex gap-8">
+      <!-- <div class="flex gap-8">
         <a class="btn btn-primary" href="#/org/{{orgId}}/add-user">
           + Add User
         </a>
-      </div>
+      </div> -->
+      <button class="btn btn-primary" ng-click="showCreateForm = !showCreateForm">
+        + Add Worker
+      </button>
     </div>
 
     <div class="page-body">
@@ -225,3 +228,74 @@
     </div>
   </div>
 </div>
+
+<!-- Add User Modal -->
+<div class="modal-overlay add-user-overlay" ng-if="showCreateForm">
+  <div class="modal add-user-modal">
+
+    <div class="modal-header">
+      <div class="modal-title">Add User</div>
+      <button class="modal-close" ng-click="testClose()">×</button>
+    </div>
+
+    <div class="modal-body add-user-body">
+      <div ng-include="'views/org/add-user.html'"></div>
+    </div>
+
+  </div>
+</div>
+
+<style>
+  /* Fullscreen overlay */
+  .add-user-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(0, 0, 0, .75);
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 20px;
+  }
+
+  /* Wide modal */
+  .add-user-modal {
+    width: 95%;
+    max-width: 1200px;
+
+    max-height: 95vh;
+
+    display: flex;
+    flex-direction: column;
+
+    overflow: hidden;
+  }
+
+  /* Scroll only body */
+  .add-user-body {
+    flex: 1;
+    overflow-y: auto;
+
+    padding: 24px;
+  }
+
+  /* Make form use full width */
+  .add-user-body>div,
+  .add-user-body .card,
+  .add-user-body form {
+    width: 100%;
+    max-width: none;
+  }
+
+  /* Better scrollbar */
+  .add-user-body::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .add-user-body::-webkit-scrollbar-thumb {
+    border-radius: 10px;
+    background: rgba(255, 255, 255, .2);
+  }
+</style>

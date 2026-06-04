@@ -24,6 +24,7 @@ const ORG_ADMIN_ENDPOINTS = [
   // Org-admin timetable management endpoints
   /\/api\/org\/[^/]+\/workers(\/|$)/,
   /\/api\/org\/[^/]+\/settings(\/|$)/,
+  /\/api\/org\/[^/]+\/email-conflicts(\/|$)/,
   /\/api\/work-limits(\/|$)/,
   /\/api\/availability(\/|$)/,
   /\/api\/timetable(\/|$)/,
@@ -158,23 +159,32 @@ angular
         },
 
         responseError: function (rejection) {
-          // Only auto-logout on 401 for non-public, non-org-admin endpoints
           if (
             rejection.status === 401 &&
             rejection.config &&
-            !matchesAny(rejection.config.url, PUBLIC_ENDPOINTS) &&
-            !matchesAny(rejection.config.url, ORG_ADMIN_ENDPOINTS)
+            !matchesAny(rejection.config.url, PUBLIC_ENDPOINTS)
           ) {
-            $window.localStorage.removeItem("access_token");
-            $window.localStorage.removeItem("refresh_token");
-            $window.localStorage.removeItem("user");
             var org = null;
             try {
               org = JSON.parse($window.localStorage.getItem("org") || "null");
             } catch (e) {}
-            $window.location.href = org
-              ? "#/org/" + org.org_id + "/join"
-              : "#/";
+
+            if (matchesAny(rejection.config.url, ORG_ADMIN_ENDPOINTS)) {
+              // Org-Token expired or missing — clear org session, go to org login
+              $window.localStorage.removeItem("org_token");
+              $window.localStorage.removeItem("org");
+              $window.location.href = org
+                ? "#/org/" + org.org_id + "/login"
+                : "#/";
+            } else {
+              // JWT expired — clear worker session, go to worker join page
+              $window.localStorage.removeItem("access_token");
+              $window.localStorage.removeItem("refresh_token");
+              $window.localStorage.removeItem("user");
+              $window.location.href = org
+                ? "#/org/" + org.org_id + "/join"
+                : "#/";
+            }
           }
           return $q.reject(rejection);
         },
