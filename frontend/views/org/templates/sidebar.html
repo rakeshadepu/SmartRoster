@@ -14,22 +14,22 @@
 </div>
 <div class="sidebar-nav">
   <div class="nav-section-label">Organisation</div>
-  <a class="nav-link active" href="#/org/{{orgId}}/dashboard">
+  <a class="nav-link" ng-class="{active: isActive('/dashboard')}" href="#/org/{{orgId}}/dashboard">
     <i class="fa-solid fa-house"></i>
     <span>Home</span>
   </a>
 
-  <a class="nav-link" href="#/org/{{orgId}}/manage">
+  <a class="nav-link" ng-class="{active: isActive('/manage')}" href="#/org/{{orgId}}/manage">
     <i class="fa-solid fa-users"></i>
     <span>Employees</span>
   </a>
 
-  <a class="nav-link" href="#/org/{{orgId}}/schedule">
+  <a class="nav-link" ng-class="{active: isActive('/schedule') && !isActive('/schedule/')}" href="#/org/{{orgId}}/schedule">
     <i class="fa-solid fa-table-list"></i>
     <span>Scheduler</span>
   </a>
 
-  <a class="nav-link" href="#/org/{{orgId}}/settings">
+  <a class="nav-link" ng-class="{active: isActive('/settings')}" href="#/org/{{orgId}}/settings">
     <i class="fa-solid fa-shop"></i>
     <span>Organisation Settings</span>
   </a>
@@ -41,7 +41,7 @@
     <span>Worker Login Link</span>
   </a>
 
-  <a class="nav-link" href="#/org/{{orgId}}/global-users">
+  <a class="nav-link" ng-class="{active: isActive('/global-users')}" href="#/org/{{orgId}}/global-users">
     <i class="fa-solid fa-magnifying-glass"></i>
     <span>Global Workforce</span>
   </a>

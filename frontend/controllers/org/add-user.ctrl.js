@@ -2,34 +2,50 @@
 
 angular.module("TimetableApp").controller("AddUserCtrl", [
   "$scope",
+  "$rootScope",
   "$location",
   "$routeParams",
   "AuthService",
   "ApiService",
-  function ($scope, $location, $routeParams, AuthService, ApiService) {
-    const orgId = $routeParams.orgId;
+  function (
+    $scope,
+    $rootScope,
+    $location,
+    $routeParams,
+    AuthService,
+    ApiService,
+  ) {
+    const orgId = $routeParams.orgId || $scope.$parent.orgId;
     $scope.orgId = orgId;
     $scope.loading = false;
     $scope.error = null;
-    $scope.created = null; // holds credentials after success
+    $scope.created = null;
 
-    $scope.form = {
-      first_name: "",
-      last_name: "",
-      email: "",
-      phone: "",
-      role: "WORKER",
-      work_type: "SELECT",
-      nationality: "",
-      dob: "",
-      iban: "",
-      bic: "",
-      house_number: "",
-      street: "",
-      city: "",
-      country: "",
-      zip_code: "",
-    };
+    // Edit mode state
+    $scope.editMode = false;
+    $scope.editUserId = null;
+
+    function blankForm() {
+      return {
+        first_name: "",
+        last_name: "",
+        email: "",
+        phone: "",
+        role: "WORKER",
+        work_type: "",
+        nationality: "",
+        dob: "",
+        iban: "",
+        bic: "",
+        house_number: "",
+        street: "",
+        city: "",
+        country: "",
+        zip_code: "",
+      };
+    }
+
+    $scope.form = blankForm();
 
     $scope.countries = [
       { name: "Argentina", code: "+54", digits: 10, flag: "🇦🇷" },
@@ -68,10 +84,55 @@ angular.module("TimetableApp").controller("AddUserCtrl", [
       $scope.countries.find(function (c) {
         return c.name === "Germany";
       }) || $scope.countries[0];
+
     $scope.phoneError = null;
     $scope.phoneOk = false;
 
-    // Watch phone + country for validation
+    // ── Listen for edit data broadcast from parent controller ─────────────────
+    $scope.$on("editWorkerData", function (evt, workerData) {
+      if (!workerData) {
+        // Add mode — reset everything
+        $scope.editMode = false;
+        $scope.editUserId = null;
+        $scope.form = blankForm();
+        $scope.error = null;
+        $scope.created = null;
+        $scope.phoneOk = false;
+        $scope.phoneError = null;
+        return;
+      }
+
+      // Edit mode — pre-fill form
+      $scope.editMode = true;
+      $scope.editUserId = workerData.user_id;
+      $scope.form = {
+        first_name: workerData.first_name || "",
+        last_name: workerData.last_name || "",
+        email: workerData.email || "",
+        phone: workerData.phone || "",
+        role: "WORKER",
+        work_type: workerData.work_type || "FULL_TIME",
+        nationality: workerData.nationality || "",
+        dob: workerData.dob || "",
+        iban: workerData.iban || "",
+        bic: workerData.bic || "",
+        house_number: workerData.house_number || "",
+        street: workerData.street || "",
+        city: workerData.city || "",
+        country: workerData.country || "",
+        zip_code: workerData.zip_code || "",
+      };
+      $scope.error = null;
+      $scope.created = null;
+
+      // If phone present, mark as ok (it was valid when saved)
+      if (workerData.phone) {
+        $scope.phoneOk = true;
+        $scope.phoneError = null;
+      }
+    });
+
+    // ── Phone validation watcher ──────────────────────────────────────────────
     $scope.$watch(
       function () {
         return { phone: $scope.form.phone, country: $scope.selectedCountry };
@@ -115,6 +176,7 @@ angular.module("TimetableApp").controller("AddUserCtrl", [
       $scope.phoneOk = false;
     };
 
+    // ── Submit (add or edit) ──────────────────────────────────────────────────
     $scope.submit = function () {
       $scope.error = null;
 
@@ -122,32 +184,26 @@ angular.module("TimetableApp").controller("AddUserCtrl", [
         $scope.error = "First name is required.";
         return;
       }
-
       if (!$scope.form.last_name.trim()) {
         $scope.error = "Last name is required.";
         return;
       }
-
       if (!$scope.form.email.trim()) {
         $scope.error = "Email address is required.";
         return;
       }
-
       if (!$scope.form.dob) {
         $scope.error = "Date of birth is required.";
         return;
       }
-
       if (!$scope.form.nationality.trim()) {
         $scope.error = "Nationality is required.";
         return;
       }
-
-      if (!$scope.form.work_type || $scope.form.work_type === "SELECT") {
+      if (!$scope.form.work_type) {
         $scope.error = "Please choose a type of employment.";
         return;
       }
-
       if (!$scope.phoneOk) {
         $scope.error = "Please enter a valid mobile number.";
         return;
@@ -155,40 +211,68 @@ angular.module("TimetableApp").controller("AddUserCtrl", [
 
       $scope.loading = true;
       var payload = angular.copy($scope.form);
-      payload.phone = $scope.form.phone; // already digits-only from watcher
 
-      ApiService.orgAddUser(orgId, payload)
-        .then(function (res) {
-          $scope.created = {
-            user: res.data.user,
-            plain_password: res.data.plain_password,
-            message: res.data.message,
-          };
-        })
-        .catch(function (err) {
-          var e = err.data && err.data.errors;
-          if (e) {
-            var msgs = [];
-            Object.entries(e).forEach(function (pair) {
-              var field = pair[0],
-                errs = pair[1];
-              var label =
-                field === "non_field_errors"
-                  ? ""
-                  : field.replace(/_/g, " ") + ": ";
-              (Array.isArray(errs) ? errs : [errs]).forEach(function (m) {
-                msgs.push(label + m);
-              });
-            });
-            $scope.error = msgs.join(" · ");
-          } else {
-            $scope.error = "Failed to create user. Please try again.";
-          }
-        })
-        .finally(function () {
-          $scope.loading = false;
-        });
+      if ($scope.editMode) {
+        // ── UPDATE existing worker ──────────────────────────────────────────
+        ApiService.updateWorker(orgId, $scope.editUserId, payload)
+          .then(function () {
+            $rootScope.$emit("workerSaved", null); // null = no new credential to show
+            // Also broadcast for same-scope listeners
+            $scope.$emit("workerSaved", null);
+          })
+          .catch(function (err) {
+            $scope.error = _extractError(
+              err,
+              "Failed to update worker. Please try again.",
+            );
+          })
+          .finally(function () {
+            $scope.loading = false;
+          });
+      } else {
+        // ── CREATE new worker ───────────────────────────────────────────────
+        // ── CREATE new worker ───────────────────────────────────────────────
+        ApiService.orgAddUser(orgId, payload)
+          .then(function (res) {
+            var cred = {
+              name: res.data.user.full_name,
+              user_id: res.data.user.user_id,
+              password: res.data.plain_password,
+              join_url: window.location.origin + "/#/org/" + orgId + "/join",
+            };
+            // DO NOT set $scope.created here — modal closes immediately on emit.
+            // Parent controller (OrgWorkersCtrl) receives cred and shows it on the main page.
+            $scope.$emit("workerSaved", cred);
+          })
+          .catch(function (err) {
+            $scope.error = _extractError(
+              err,
+              "Failed to create user. Please try again.",
+            );
+          })
+          .finally(function () {
+            $scope.loading = false;
+          });
+      }
     };
+
+    function _extractError(err, fallback) {
+      var e = err.data && err.data.errors;
+      if (e) {
+        var msgs = [];
+        Object.entries(e).forEach(function (pair) {
+          var field = pair[0],
+            errs = pair[1];
+          var label =
+            field === "non_field_errors" ? "" : field.replace(/_/g, " ") + ": ";
+          (Array.isArray(errs) ? errs : [errs]).forEach(function (m) {
+            msgs.push(label + m);
+          });
+        });
+        return msgs.join(" · ");
+      }
+      return (err.data && err.data.error) || fallback;
+    }
 
     $scope.copyText = function (text, $event) {
       navigator.clipboard.writeText(text);
@@ -204,24 +288,14 @@ angular.module("TimetableApp").controller("AddUserCtrl", [
     $scope.addAnother = function () {
       $scope.created = null;
       $scope.error = null;
-      $scope.form = {
-        first_name: "",
-        last_name: "",
-        email: "",
-        phone: "",
-        role: "WORKER",
-        work_type: "SELECT",
-        nationality: "",
-        dob: "",
-        iban: "",
-        bic: "",
-        house_number: "",
-        street: "",
-        city: "",
-        country: "",
-        zip_code: "",
-      };
+      $scope.editMode = false;
+      $scope.editUserId = null;
+      $scope.form = blankForm();
       $scope.phoneOk = false;
+    };
+
+    $scope.cancelForm = function () {
+      $scope.$emit("closeAddWorkerForm");
     };
 
     $scope.goBack = function () {

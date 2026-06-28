@@ -2,11 +2,10 @@
 
 angular.module("TimetableApp").controller("OrgDashboardCtrl", [
   "$scope",
-  "$location",
   "$routeParams",
   "AuthService",
   "ApiService",
-  function ($scope, $location, $routeParams, AuthService, ApiService) {
+  function ($scope, $routeParams, AuthService, ApiService) {
     const orgId = $routeParams.orgId;
     $scope.orgId = orgId;
     $scope.org = AuthService.getOrg();
@@ -14,25 +13,44 @@ angular.module("TimetableApp").controller("OrgDashboardCtrl", [
     $scope.loading = true;
     $scope.error = null;
     $scope.success = null;
-
-    $scope.showForm = false;
-    $scope.creating = false;
-    $scope.newEmpName = "";
     $scope.createdCred = null;
+    $scope.showCreateForm = false;
+    $scope.expandedId = null; // tracks which row is open
 
-    $scope.editModal = false;
-    $scope.editEmployee = {};
+    $scope.jobHistories = {}; // keyed by user_id
+    $scope.historyLoading = {}; // keyed by user_id
 
-    $scope.resetModal = false;
-    $scope.resetCred = null;
+    $scope.toggleExpand = function (userId) {
+      if ($scope.expandedId === userId) {
+        $scope.expandedId = null;
+        return;
+      }
+      $scope.expandedId = userId;
 
+      // Only fetch if not already loaded
+      if ($scope.jobHistories[userId]) return;
+
+      $scope.historyLoading[userId] = true;
+      ApiService.getWorkerHistory(orgId, userId)
+        .then(function (res) {
+          $scope.jobHistories[userId] = res.data.history || [];
+        })
+        .catch(function () {
+          $scope.jobHistories[userId] = [];
+        })
+        .finally(function () {
+          $scope.historyLoading[userId] = false;
+        });
+    };
+
+    // ── Load ─────────────────────────────────────────────────────────────
     function loadAll() {
       $scope.loading = true;
       ApiService.orgMe(orgId)
         .then((res) => {
           $scope.org = res.data.organisation;
           AuthService.saveOrgSession(AuthService.getOrgToken(), $scope.org);
-          $scope.employees = res.data.employees || [];
+          $scope.employees = res.data.workers || [];
         })
         .catch(() => {
           $scope.error = "Session expired. Please log in again.";
@@ -45,118 +63,104 @@ angular.module("TimetableApp").controller("OrgDashboardCtrl", [
 
     loadAll();
 
-    $scope.createEmployee = function () {
-      if (!$scope.newEmpName.trim()) return;
-      $scope.creating = true;
-      $scope.error = null;
+    // ── Expand / collapse row ─────────────────────────────────────────────
+    $scope.toggleExpand = function (userId) {
+      $scope.expandedId = $scope.expandedId === userId ? null : userId;
+    };
+
+    $scope.isExpanded = function (userId) {
+      return $scope.expandedId === userId;
+    };
+
+    // ── Add worker modal ──────────────────────────────────────────────────
+    $scope.testClose = function () {
+      $scope.showCreateForm = false;
+    };
+
+    // Receive credential from AddUserCtrl after successful create
+    $scope.$on("workerSaved", function (evt, cred) {
+      $scope.showCreateForm = false;
+      if (cred) {
+        $scope.createdCred = cred;
+      } else {
+        $scope.success = "Worker updated successfully.";
+        setTimeout(
+          () =>
+            $scope.$apply(() => {
+              $scope.success = null;
+            }),
+          3000,
+        );
+      }
+      loadAll();
+    });
+
+    $scope.$on("closeAddWorkerForm", function () {
+      $scope.showCreateForm = false;
+    });
+
+    $scope.dismissCred = function () {
       $scope.createdCred = null;
-
-      ApiService.orgCreateEmployee(orgId, { full_name: $scope.newEmpName })
-        .then((res) => {
-          $scope.createdCred = res.data.employee;
-          $scope.newEmpName = "";
-          $scope.showForm = false;
-          loadAll();
-        })
-        .catch((err) => {
-          $scope.error =
-            err.data && err.data.error
-              ? err.data.error
-              : "Failed to create employee.";
-        })
-        .finally(() => {
-          $scope.creating = false;
-        });
     };
 
-    $scope.openEdit = function (emp) {
-      $scope.editEmployee = {
-        pk: emp.id,
-        full_name: emp.full_name,
-        is_active: emp.is_active,
+    // ── Helpers ───────────────────────────────────────────────────────────
+    $scope.workTypeBadge = function (wt) {
+      return {
+        "badge-green": wt === "FULL_TIME",
+        "badge-blue": wt === "PART_TIME",
+        "badge-yellow": wt === "MINIJOB",
       };
-      $scope.editModal = true;
-      $scope.error = null;
     };
 
-    $scope.saveEdit = function () {
-      ApiService.updateWorker(orgId, $scope.editEmployee.pk, {
-        full_name: $scope.editEmployee.full_name,
-        is_active: $scope.editEmployee.is_active,
-      })
-        .then(() => {
-          $scope.editModal = false;
-          $scope.success = "Employee updated.";
-          loadAll();
-          setTimeout(() => {
-            $scope.$apply(() => {
-              $scope.success = null;
-            });
-          }, 3000);
-        })
-        .catch(() => {
-          $scope.error = "Update failed.";
-        });
-    };
-
-    $scope.deactivate = function (emp) {
-      if (!confirm(`Deactivate ${emp.full_name}?`)) return;
-      ApiService.deleteWorker(orgId, emp.id)
-        .then(() => {
-          $scope.success = `${emp.full_name} deactivated.`;
-          loadAll();
-          setTimeout(() => {
-            $scope.$apply(() => {
-              $scope.success = null;
-            });
-          }, 3000);
-        })
-        .catch(() => {
-          $scope.error = "Deactivate failed.";
-        });
-    };
-
-    $scope.resetPassword = function (emp) {
-      if (!confirm(`Reset password for ${emp.full_name}?`)) return;
-      ApiService.resetPassword(orgId, emp.id)
-        .then((res) => {
-          $scope.resetCred = {
-            user_id: res.data.user_id,
-            password: res.data.new_password,
-          };
-          $scope.resetModal = true;
-        })
-        .catch(() => {
-          $scope.error = "Reset failed.";
-        });
+    $scope.workTypeLabel = function (wt) {
+      return (
+        { FULL_TIME: "Full Time", PART_TIME: "Part Time", MINIJOB: "Mini Job" }[
+          wt
+        ] || wt
+      );
     };
 
     $scope.copyText = function (text, $event) {
-      navigator.clipboard.writeText(text);
       const btn = $event.target;
-      btn.textContent = "Copied!";
-      btn.classList.add("copied");
-      setTimeout(() => {
-        btn.textContent = "Copy";
-        btn.classList.remove("copied");
-      }, 2000);
-    };
 
-    $scope.closeEditModal = function () {
-      console.log("clicked")
-      $scope.editModal = false;
-      $scope.editEmployee = {};
-    };
+      function showCopied() {
+        btn.textContent = "Copied!";
+        btn.classList.add("copied");
 
-     $scope.testClose = function () {
-       // console.log("close clicked");
-       $scope.showCreateForm = false;
-     };
+        setTimeout(function () {
+          btn.textContent = "Copy";
+          btn.classList.remove("copied");
+        }, 2000);
+      }
 
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard
+          .writeText(text)
+          .then(showCopied)
+          .catch(function (err) {
+            console.error("Clipboard write failed:", err);
+          });
+      } else {
+        // Fallback for browsers without Clipboard API
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.style.position = "fixed";
+        textarea.style.left = "-9999px";
 
-    $scope.closeResetModal = function () {
-      $scope.resetModal = false;
-      $scope.resetCred = null;
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+
+        try {
+          document.execCommand("copy");
+          showCopied();
+        } catch (err) {
+          console.error("Fallback copy failed:", err);
+          alert("Unable to copy automatically. Please copy manually.");
+        }
+
+        document.body.removeChild(textarea);
+      }
     };
 
     $scope.logout = function () {

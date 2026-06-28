@@ -215,6 +215,17 @@ angular
         );
       };
 
+      $rootScope.$on("$routeChangeSuccess", function () {
+        $rootScope.currentPath = $location.path();
+      });
+
+      $rootScope.isActive = function (segment) {
+        return (
+          $rootScope.currentPath &&
+          $rootScope.currentPath.indexOf(segment) !== -1
+        );
+      };
+      
       $rootScope.showCopyToast = false;
 
       $rootScope.copyJoinLink = function ($event) {

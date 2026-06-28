@@ -29,13 +29,11 @@ class UserAdmin(BaseUserAdmin):
         'phone',
         'work_type',
         'org',
-        'is_active'
     ]
 
     list_filter = [
         'role',
         'work_type',
-        'is_active',
         'org'
     ]
 
@@ -90,7 +88,6 @@ class UserAdmin(BaseUserAdmin):
 
         ('Status', {
             'fields': (
-                'is_active',
                 'is_staff',
                 'is_superuser'
             )

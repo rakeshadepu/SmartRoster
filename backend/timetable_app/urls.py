@@ -59,6 +59,10 @@ urlpatterns = [
          views.GlobalUserSearchView.as_view(),
          name='org-global-users'),
 
+    path('org/<str:org_id>/workers/<str:user_id>/history/',
+     views.WorkerJobHistoryView.as_view(),
+     name='worker-job-history'),
+
     # =========================================================
     # WORKERS
     # =========================================================

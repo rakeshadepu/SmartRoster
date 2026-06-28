@@ -1,119 +1,194 @@
-'use strict';
+"use strict";
 
 /**
  * OrgSettingsCtrl
  * Route: /org/:orgId/settings   (access: org)
- * Manages shop hours and work type weekly hour limits.
+ * Manages org info, shop hours and work type weekly hour limits.
  * Authenticated via Org-Token (org admin).
  * Backend URLs: /api/org/<orgId>/settings/  and  /api/work-limits/
  */
-angular.module('TimetableApp')
-.controller('OrgSettingsCtrl', ['$scope', '$routeParams', 'AuthService', 'ApiService',
-function($scope, $routeParams, AuthService, ApiService) {
+angular.module("TimetableApp").controller("OrgSettingsCtrl", [
+  "$scope",
+  "$rootScope",
+  "$routeParams",
+  "AuthService",
+  "ApiService",
+  function ($scope, $rootScope, $routeParams, AuthService, ApiService) {
+    const orgId = $routeParams.orgId;
 
-  const orgId  = $routeParams.orgId;
-
-  $scope.orgId      = orgId;
-  $scope.org        = AuthService.getOrg();
-  $scope.limits     = [];
-  $scope.loading    = true;
-  $scope.saving     = false;
-  $scope.error      = null;
-  $scope.success    = null;
-  $scope.shopForm   = { shop_open: '', shop_close: '' };
-  $scope.limitsForm = { FULL_TIME: 40, PART_TIME: 20, MINIJOB: 10 };
-  $scope.settingsForm = {
-    name: "",
-    email: "",
-    password: "",
-    confirm_pw: "",
-  };
-
-  function load() {
-    ApiService.getOrg(orgId).then(function(res) {
-      $scope.org = res.data.organisation;
-      $scope.shopForm.shop_open  = ($scope.org.shop_open  || '').slice(0, 5);
-      $scope.shopForm.shop_close = ($scope.org.shop_close || '').slice(0, 5);
-      $scope.settingsForm.name = $scope.org.name || "";
-
-      $scope.settingsForm.email = $scope.org.email || "";
-
-      AuthService.saveOrgSession(AuthService.getOrgToken(), $scope.org);
-    });
-    
-    ApiService.getLimits().then(function(res) {
-      $scope.limits = res.data.limits || [];
-      $scope.limits.forEach(function(l) { $scope.limitsForm[l.work_type] = l.hours_per_week; });
-    }).finally(function () { $scope.loading = false; });
-  }
-
-  load();
-
-  $scope.saveShopHours = function() {
-    $scope.saving  = true;
-    $scope.error   = null;
-    $scope.success = null;
-    ApiService.updateOrg(orgId, $scope.shopForm).then(function(res) {
-      $scope.org     = res.data.organisation;
-      $scope.success = 'Shop hours updated.';
-    }).catch(function(err) {
-      $scope.error = err.data && err.data.errors ?
-        JSON.stringify(err.data.errors) : 'Failed to save.';
-    }).finally(function() {
-      $scope.saving = false;
-      setTimeout(function() { $scope.$apply(function() { $scope.success = null; }); }, 3000);
-    });
-  };
-
-  $scope.saveSettings = function () {
+    $scope.orgId = orgId;
+    $scope.org = AuthService.getOrg();
+    $scope.limits = [];
+    $scope.loading = true;
+    $scope.saving = false;
     $scope.error = null;
-
-    const payload = {
-      name: $scope.settingsForm.name,
-      email: $scope.settingsForm.email,
+    $scope.shopForm = { shop_open: "", shop_close: "" };
+    $scope.limitsForm = { FULL_TIME: 40, PART_TIME: 20, MINIJOB: 10 };
+    $scope.settingsForm = {
+      name: "",
+      email: "",
+      password: "",
+      confirm_pw: "",
     };
 
-    if ($scope.settingsForm.password) {
-      if ($scope.settingsForm.password !== $scope.settingsForm.confirm_pw) {
-        $scope.error = "Passwords do not match.";
-        return;
-      }
+    // ── Toast ─────────────────────────────────────────────────────────────────
 
-      payload.password = $scope.settingsForm.password;
+    function showToast(message) {
+      $scope.settingsToastMsg  = message;
+      $scope.showSettingsToast = true;
+
+      setTimeout(function() {
+        $scope.$apply(function() {
+          $scope.showSettingsToast = false;
+          $scope.settingsToastMsg  = '';
+        });
+      }, 2500);
     }
 
-    ApiService.updateOrg(orgId, payload)
-      .then(function (res) {
+    function showErrorToast(message) {
+      $scope.errorToastMsg  = message;
+      $scope.showErrorToast = true;
+
+      setTimeout(function() {
+        $scope.$apply(function() {
+          $scope.showErrorToast = false;
+          $scope.errorToastMsg  = '';
+        });
+      }, 3000);
+    }
+
+    function load() {
+      ApiService.orgSettings(orgId).then(function (res) {
+        // ← was getOrg
         $scope.org = res.data.organisation;
-
+        $scope.shopForm.shop_open = ($scope.org.shop_open || "").slice(0, 5);
+        $scope.shopForm.shop_close = ($scope.org.shop_close || "").slice(0, 5);
+        $scope.settingsForm.name = $scope.org.name || "";
+        $scope.settingsForm.email = $scope.org.email || "";
         AuthService.saveOrgSession(AuthService.getOrgToken(), $scope.org);
-
-        $scope.success = "Organisation settings updated.";
-
-        $scope.settingsForm.password = "";
-        $scope.settingsForm.confirm_pw = "";
-      })
-      .catch(function (err) {
-        $scope.error =
-          err.data && err.data.error
-            ? err.data.error
-            : "Failed to save settings.";
       });
-  };
 
-  $scope.saveLimit = function(workType) {
-    $scope.error = null;
-    ApiService.setLimit({ work_type: workType, hours_per_week: $scope.limitsForm[workType] })
-    .then(function() {
-      $scope.success = workType.replace('_', ' ') + ' limit saved.';
-      load();
-    }).catch(function(err) {
-      $scope.error = err.data && err.data.errors ?
-        JSON.stringify(err.data.errors) : 'Failed to update.';
-    }).finally(function() {
-      setTimeout(function() { $scope.$apply(function() { $scope.success = null; }); }, 3000);
-    });
-  };
+      ApiService.getLimits()
+        .then(function (res) {
+          $scope.limits = res.data.limits || [];
+          $scope.limits.forEach(function (l) {
+            $scope.limitsForm[l.work_type] = l.hours_per_week;
+          });
+        })
+        .finally(function () {
+          $scope.loading = false;
+        });
+    }
 
-  $scope.logout = function() { AuthService.orgLogout(orgId); };
-}]);
+    load();
+
+    $scope.updateName = function () {
+      if (!$scope.settingsForm.name || !$scope.settingsForm.name.trim()) {
+        showErrorToast("Organisation name cannot be empty.");
+        return;
+      }
+      ApiService.orgUpdate(orgId, { name: $scope.settingsForm.name.trim() }) // ← was updateOrg
+        .then(function (res) {
+          $scope.org = res.data.organisation;
+          AuthService.saveOrgSession(AuthService.getOrgToken(), $scope.org);
+          showToast("Organisation name updated.");
+        })
+        .catch(function (err) {
+          showErrorToast(
+            err.data && err.data.error
+              ? err.data.error
+              : "Failed to update organisation name.",
+          );
+        });
+    };
+
+    $scope.updateEmail = function () {
+      if (!$scope.settingsForm.email || !$scope.settingsForm.email.trim()) {
+        showErrorToast("Email cannot be empty.");
+        return;
+      }
+      ApiService.orgUpdate(orgId, { email: $scope.settingsForm.email.trim() }) // ← was updateOrg
+        .then(function (res) {
+          $scope.org = res.data.organisation;
+          AuthService.saveOrgSession(AuthService.getOrgToken(), $scope.org);
+          showToast("Admin email updated.");
+        })
+        .catch(function (err) {
+          showErrorToast(
+            err.data && err.data.error
+              ? err.data.error
+              : "Failed to update email.",
+          );
+        });
+    };
+
+    $scope.updatePassword = function () {
+      if (!$scope.settingsForm.password) {
+        showErrorToast("Please enter a new password.");
+        return;
+      }
+      if ($scope.settingsForm.password !== $scope.settingsForm.confirm_pw) {
+        showErrorToast("Passwords do not match.");
+        return;
+      }
+      ApiService.orgUpdate(orgId, { password: $scope.settingsForm.password }) // ← was updateOrg
+        .then(function () {
+          $scope.settingsForm.password = "";
+          $scope.settingsForm.confirm_pw = "";
+          showToast("Password updated successfully.");
+        })
+        .catch(function (err) {
+          showErrorToast(
+            err.data && err.data.error
+              ? err.data.error
+              : "Failed to update password.",
+          );
+        });
+    };
+
+    $scope.saveShopHours = function () {
+      $scope.saving = true;
+      ApiService.orgUpdate(orgId, $scope.shopForm) // ← was updateOrg
+        .then(function (res) {
+          $scope.org = res.data.organisation;
+          showToast("Shop hours updated.");
+        })
+        .catch(function (err) {
+          showErrorToast(
+            err.data && err.data.errors
+              ? JSON.stringify(err.data.errors)
+              : "Failed to save shop hours.",
+          );
+        })
+        .finally(function () {
+          $scope.saving = false;
+        });
+    };
+
+    // ── Update Weekly Limit ───────────────────────────────────────────────────
+
+    $scope.saveLimit = function (workType) {
+
+
+      ApiService.setLimit({
+        work_type: workType,
+        hours_per_week: $scope.limitsForm[workType],
+      })
+        .then(function () {
+          load();
+          showToast(workType.replace("_", " ") + " limit saved.");
+        })
+        .catch(function (err) {
+          showErrorToast(
+            err.data && err.data.errors
+              ? JSON.stringify(err.data.errors)
+              : "Failed to update limit.",
+          );
+        });
+    };
+
+    $scope.logout = function () {
+      AuthService.orgLogout(orgId);
+    };
+  },
+]);

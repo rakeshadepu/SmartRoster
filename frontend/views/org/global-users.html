@@ -54,9 +54,9 @@
         <div class="card" ng-if="result">
           <div class="card-header">
             <div class="card-title">User Found</div>
-            <span class="badge" ng-class="result.is_active ? 'badge-green' : 'badge-red'">
+            <!-- <span class="badge" ng-class="result.is_active ? 'badge-green' : 'badge-red'">
               {{result.is_active ? 'Active' : 'Inactive'}}
-            </span>
+            </span> -->
           </div>
           <div class="card-body">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
@@ -87,7 +87,7 @@
                 <div class="text-xs text-dim" style="text-transform:uppercase;letter-spacing:.7px;margin-bottom:3px">Current Organisation</div>
                 <div ng-if="result.current_org" class="fw-600">
                   {{result.current_org.name}}
-                  <span class="mono text-xs text-dim" style="margin-left:6px">{{result.current_org.org_id}}</span>
+                  <!-- <span class="mono text-xs text-dim" style="margin-left:6px">{{result.current_org.org_id}}</span> -->
                 </div>
                 <div ng-if="!result.current_org" class="text-dim text-sm">Not assigned to any organisation</div>
               </div>

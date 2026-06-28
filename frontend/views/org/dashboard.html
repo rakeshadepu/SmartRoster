@@ -1,9 +1,7 @@
 <div class="app-layout">
 
-  <!-- Sidebar -->
   <nav class="sidebar" ng-include="'views/org/templates/sidebar.html'"></nav>
 
-  <!-- Main -->
   <div class="main-content">
     <div class="page-header">
       <div>
@@ -13,11 +11,6 @@
           Shop {{(org.shop_open || '').slice(0,5)}} – {{(org.shop_close || '').slice(0,5)}}
         </div>
       </div>
-      <!-- <div class="flex gap-8">
-        <a class="btn btn-primary" href="#/org/{{orgId}}/add-user">
-          + Add User
-        </a>
-      </div> -->
       <button class="btn btn-primary" ng-click="showCreateForm = !showCreateForm">
         + Add Worker
       </button>
@@ -30,11 +23,11 @@
 
       <!-- Created credentials (shown once) -->
       <div class="password-reveal" ng-if="createdCred" style="margin-bottom:20px">
-        <h4>⚠ Save these credentials — password will NOT be shown again</h4>
+        <h4> Save these credentials — password will NOT be shown again</h4>
         <div class="credential-row">
           <div>
-            <div class="credential-label">Employee</div>
-            <div class="credential-value">{{createdCred.full_name}}</div>
+            <div class="credential-label">Worker</div>
+            <div class="credential-value">{{createdCred.name}}</div>
           </div>
         </div>
         <div class="credential-row">
@@ -47,21 +40,25 @@
         <div class="credential-row">
           <div>
             <div class="credential-label">Password</div>
-            <div class="credential-value mono">{{createdCred.plain_password}}</div>
+            <div class="credential-value mono">{{createdCred.password}}</div>
           </div>
-          <button class="credential-copy" ng-click="copyText(createdCred.plain_password, $event)">Copy</button>
+          <button class="credential-copy" ng-click="copyText(createdCred.password, $event)">Copy</button>
         </div>
-        <div class="alert alert-info" style="margin-top:10px; font-size:12px">
-          This worker can now log in at <strong>#/login</strong> using their User ID and password.
+        <div class="credential-row">
+          <div>
+            <div class="credential-label">Join URL</div>
+            <div class="credential-value mono">{{createdCred.join_url}}</div>
+          </div>
+          <button class="credential-copy" ng-click="copyText(createdCred.join_url, $event)">Copy</button>
         </div>
-        <button class="btn btn-sm btn-secondary mt-8" ng-click="createdCred = null">Dismiss</button>
+        <button class="btn btn-sm btn-secondary mt-8" ng-click="dismissCred()">Dismiss</button>
       </div>
 
-      <!-- Org owner card — data lives on Organisation, not a User row -->
+      <!-- Org owner card -->
       <div class="card mb-16" ng-if="org"
         style="margin-bottom:14px;background:rgba(200,168,75,0.06);border-color:var(--accent-dim)">
         <div class="card-body"
-          style="padding:14px 18px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px">
+          style="padding:14px 18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
           <div>
             <div class="text-xs fw-600"
               style="text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px;color:var(--accent)">
@@ -76,23 +73,21 @@
         </div>
       </div>
 
-      <!-- Stats row -->
-      <div class="stats-grid" style="grid-template-columns:repeat(3,1fr); margin-bottom:20px" ng-if="!loading">
+      <!-- Stats -->
+      <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px" ng-if="!loading">
         <div class="stat-card">
-          <div class="stat-label">Total Employees</div>
+          <div class="stat-label">Total Workers</div>
           <div class="stat-value stat-accent">{{employees.length}}</div>
           <div class="stat-sub">in this organisation</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Active</div>
-          <div class="stat-value">{{(employees | filter:{is_active:true}).length}}</div>
-          <div class="stat-sub">can log in</div>
+          <div class="stat-label">Full Time</div>
+          <div class="stat-value">{{(employees | filter:{work_type:'FULL_TIME'}).length}}</div>
+          <div class="stat-sub">40 h / week</div>
         </div>
         <div class="stat-card">
           <div class="stat-label">Shop Hours</div>
-          <div class="stat-value" style="font-size:16px">
-            {{(org.shop_open || '').slice(0,5)}}
-          </div>
+          <div class="stat-value" style="font-size:16px">{{(org.shop_open || '').slice(0,5)}}</div>
           <div class="stat-sub">to {{(org.shop_close || '').slice(0,5)}}</div>
         </div>
       </div>
@@ -102,10 +97,10 @@
         <span class="spinner"></span> Loading…
       </div>
 
-      <!-- Employee table -->
+      <!-- Workers table with expandable rows -->
       <div class="card" ng-if="!loading">
         <div class="card-header">
-          <div class="card-title">Employees</div>
+          <div class="card-title">Workers</div>
           <span class="badge badge-green">{{employees.length}} total</span>
         </div>
         <div class="table-wrap">
@@ -114,117 +109,189 @@
               <tr>
                 <th>Name</th>
                 <th>User ID</th>
-                <th>Status</th>
-                <th>Actions</th>
+                <th>Work Type</th>
+                <th style="width:40px"></th>
               </tr>
             </thead>
-            <tbody>
-              <tr ng-if="employees.length === 0">
-                <td colspan="4" class="text-dim text-sm">
-                  No workers yet.
-                  <button class="btn btn-sm btn-primary" ng-click="showForm = true" style="margin-left:10px">
-                    Add first worker
-                  </button>
-                </td>
-              </tr>
-              <tr ng-repeat="emp in employees">
+            <tbody ng-repeat="emp in employees">
+
+              <!-- Main row -->
+              <tr class="worker-main-row" ng-class="{'row-expanded': isExpanded(emp.user_id)}"
+                ng-click="toggleExpand(emp.user_id)" style="cursor:pointer">
                 <td>
                   <div class="fw-600 text-cream">{{emp.full_name}}</div>
-                  <div class="text-xs text-dim">Employee · can manage workers &amp; timetables</div>
+                  <div class="text-xs text-dim">{{emp.email || '—'}}</div>
                 </td>
                 <td class="mono text-sm text-dim">{{emp.user_id}}</td>
                 <td>
-                  <span class="badge" ng-class="emp.is_active ? 'badge-green' : 'badge-red'">
-                    {{emp.is_active ? 'Active' : 'Inactive'}}
+                  <span class="badge" ng-class="workTypeBadge(emp.work_type)">
+                    {{workTypeLabel(emp.work_type)}}
                   </span>
                 </td>
-                <td>
-                  <div class="td-actions">
-                    <button class="btn btn-sm btn-secondary btn-icon" ng-click="openEdit(emp)" title="Edit">✎</button>
-                    <button class="btn btn-sm btn-secondary btn-icon" ng-click="resetPassword(emp)"
-                      title="Reset password">🔑</button>
-                    <button class="btn btn-sm btn-danger btn-icon" ng-click="deactivate(emp)" ng-if="emp.is_active"
-                      title="Deactivate">✕</button>
-                  </div>
+                <td style="text-align:center">
+                  <span class="expand-arrow" ng-class="{'expanded': isExpanded(emp.user_id)}"><i class="fa-solid fa-angle-down" style="color: #6b8f4e;"></i></span>
                 </td>
               </tr>
+
+              <!-- Detail row (shown when expanded) -->
+              <tr ng-if="isExpanded(emp.user_id)" class="detail-row">
+                <td colspan="5" style="padding:0">
+                  <div class="worker-detail-panel">
+
+                    <div class="detail-grid">
+
+                      <!-- Identity -->
+                      <div class="detail-section">
+                        <div class="detail-section-title">Identity</div>
+                        <div class="detail-item">
+                          <span class="detail-label">Full Name</span>
+                          <span class="detail-value">{{emp.full_name}}</span>
+                        </div>
+                        <div class="detail-item">
+                          <span class="detail-label">First Name</span>
+                          <span class="detail-value">{{emp.first_name || '—'}}</span>
+                        </div>
+                        <div class="detail-item">
+                          <span class="detail-label">Last Name</span>
+                          <span class="detail-value">{{emp.last_name || '—'}}</span>
+                        </div>
+                        <div class="detail-item">
+                          <span class="detail-label">Date of Birth</span>
+                          <span class="detail-value">{{emp.dob || '—'}}</span>
+                        </div>
+                        <div class="detail-item">
+                          <span class="detail-label">Nationality</span>
+                          <span class="detail-value">{{emp.nationality || '—'}}</span>
+                        </div>
+                      </div>
+
+                      <!-- Contact -->
+                      <div class="detail-section">
+                        <div class="detail-section-title">Contact</div>
+                        <div class="detail-item">
+                          <span class="detail-label">Email</span>
+                          <span class="detail-value">{{emp.email || '—'}}</span>
+                        </div>
+                        <div class="detail-item">
+                          <span class="detail-label">Phone</span>
+                          <span class="detail-value mono">{{emp.phone || '—'}}</span>
+                        </div>
+                      </div>
+
+                      <!-- Employment -->
+                      <div class="detail-section">
+                        <div class="detail-section-title">Employment</div>
+                        <div class="detail-item">
+                          <span class="detail-label">User ID</span>
+                          <span class="detail-value mono">{{emp.user_id}}</span>
+                        </div>
+                        <div class="detail-item">
+                          <span class="detail-label">Work Type</span>
+                          <span class="detail-value">
+                            <span class="badge" ng-class="workTypeBadge(emp.work_type)">
+                              {{workTypeLabel(emp.work_type)}}
+                            </span>
+                          </span>
+                        </div>
+                        <div class="detail-item">
+                          <span class="detail-label">Weekly Hours</span>
+                          <span class="detail-value">{{emp.weekly_hours}}h</span>
+                        </div>
+                        <div class="detail-item">
+                          <span class="detail-label">Joined</span>
+                          <span class="detail-value">
+                            <span ng-if="emp.joined_at">{{emp.joined_at.replace(' ', ' · ')}}</span>
+                            <span ng-if="!emp.joined_at" style="opacity:.4">—</span>
+                          </span>
+                        </div>
+                      </div>
+
+                      <!-- Banking -->
+                      <div class="detail-section">
+                        <div class="detail-section-title">Banking</div>
+                        <div class="detail-item">
+                          <span class="detail-label">IBAN</span>
+                          <span class="detail-value mono">{{emp.iban || '—'}}</span>
+                        </div>
+                        <div class="detail-item">
+                          <span class="detail-label">BIC</span>
+                          <span class="detail-value mono">{{emp.bic || '—'}}</span>
+                        </div>
+                      </div>
+
+                    </div><!-- /detail-grid -->
+
+                    <!-- Job History -->
+                    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+                      <div class="detail-section-title" style="margin-bottom:12px">Job History</div>
+                    
+                      <!-- Loading -->
+                      <div ng-if="historyLoading[emp.user_id]" class="text-dim text-sm" style="display:flex;align-items:center;gap:8px">
+                        <span class="spinner"></span> Loading history…
+                      </div>
+                    
+                      <!-- Empty -->
+                      <div ng-if="!historyLoading[emp.user_id] && jobHistories[emp.user_id].length === 0" class="text-dim text-sm">
+                        No history records found.
+                      </div>
+                    
+                      <!-- History table -->
+                      <table class="data-table" ng-if="!historyLoading[emp.user_id] && jobHistories[emp.user_id].length > 0"
+                        style="margin-top:0">
+                        <thead>
+                          <tr>
+                            <th>Organisation</th>
+                            <th>Work Type</th>
+                            <th>Joined</th>
+                            <th>Left</th>
+                            <th>Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr ng-repeat="h in jobHistories[emp.user_id]">
+                            <td class="text-cream fw-600">{{h.org_name}}</td>
+                            <td>
+                              <span class="badge" ng-class="workTypeBadge(h.work_type)">
+                                {{workTypeLabel(h.work_type)}}
+                              </span>
+                            </td>
+                            <td class="text-dim text-sm" style="white-space:nowrap">
+                              {{h.joined_at.replace(' ', ' · ')}}
+                            </td>
+                            <td class="text-dim text-sm" style="white-space:nowrap">
+                              <span ng-if="h.left_at">{{h.left_at.replace(' ', ' · ')}}</span>
+                              <span ng-if="!h.left_at" style="opacity:.4">—</span>
+                            </td>
+                            <td>
+                              <span class="badge" ng-class="h.is_current ? 'badge-green' : 'badge-red'">
+                                {{h.is_current ? 'Current' : 'Past'}}
+                              </span>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div><!-- /worker-detail-panel -->
+                </td>
+              </tr>
+
             </tbody>
           </table>
         </div>
       </div>
 
-      <!-- Info box: worker login -->
+      <!-- Info box -->
       <div class="alert alert-info mt-16" style="margin-top:18px">
         <div>
-          <div class="fw-600 mb-4">Employees log in at the standard login page</div>
+          <div class="fw-600 mb-4">Workers log in at the standard login page</div>
           <div class="text-sm">
             Once a worker account is created, they log in at
             <a href="#/org/{{orgId}}/join" style="color:inherit;text-decoration:underline">#/login</a>
-            using their User ID and password. Employees can then create workers,
-            set availability rules, generate timetables, and export PDFs.
+            using their User ID and password.
           </div>
         </div>
       </div>
 
-    </div><!-- /page-body -->
-  </div><!-- /main-content -->
-</div>
-
-<!-- Edit worker modal -->
-<div class="modal-overlay" ng-if="editModal">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title">Edit Employee</div>
-      <button class="modal-close" ng-click="closeEditModal()">×</button>
-    </div>
-    <div class="modal-body">
-      <div class="form-group">
-        <label class="form-label">Full Name</label>
-        <input type="text" class="form-control" ng-model="editEmployee.full_name">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Status</label>
-        <select class="form-control" ng-model="editEmployee.is_active">
-          <option ng-value="true">Active</option>
-          <option ng-value="false">Inactive</option>
-        </select>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" ng-click="closeEditModal()">Cancel</button>
-      <button class="btn btn-primary" ng-click="saveEdit()">Save</button>
-    </div>
-  </div>
-</div>
-
-<!-- Reset password modal -->
-<div class="modal-overlay" ng-if="resetModal">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title">New Password</div>
-      <button class="modal-close" ng-click="closeEditModal()">×</button>
-    </div>
-    <div class="modal-body">
-      <div class="alert alert-warn" style="margin-bottom:16px">
-        ⚠ Save this password — it will NOT be shown again.
-      </div>
-      <div class="credential-row">
-        <div>
-          <div class="credential-label">User ID</div>
-          <div class="credential-value mono">{{resetCred.user_id}}</div>
-        </div>
-        <button class="credential-copy" ng-click="copyText(resetCred.user_id, $event)">Copy</button>
-      </div>
-      <div class="credential-row">
-        <div>
-          <div class="credential-label">New Password</div>
-          <div class="credential-value mono">{{resetCred.password}}</div>
-        </div>
-        <button class="credential-copy" ng-click="copyText(resetCred.password, $event)">Copy</button>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-primary" ng-click="resetModal = false">Done</button>
     </div>
   </div>
 </div>
@@ -232,56 +299,43 @@
 <!-- Add User Modal -->
 <div class="modal-overlay add-user-overlay" ng-if="showCreateForm">
   <div class="modal add-user-modal">
-
     <div class="modal-header">
-      <div class="modal-title">Add User</div>
+      <div class="modal-title">Add Worker</div>
       <button class="modal-close" ng-click="testClose()">×</button>
     </div>
-
     <div class="modal-body add-user-body">
-      <div ng-include="'views/org/add-user.html'"></div>
+      <div ng-controller="AddUserCtrl" ng-include="'views/org/add-user.html'"></div>
     </div>
-
   </div>
 </div>
 
 <style>
-  /* Fullscreen overlay */
   .add-user-overlay {
     position: fixed;
     inset: 0;
     z-index: 9999;
     background: rgba(0, 0, 0, .75);
-
     display: flex;
     align-items: center;
     justify-content: center;
-
     padding: 20px;
   }
 
-  /* Wide modal */
   .add-user-modal {
     width: 95%;
     max-width: 1200px;
-
     max-height: 95vh;
-
     display: flex;
     flex-direction: column;
-
     overflow: hidden;
   }
 
-  /* Scroll only body */
   .add-user-body {
     flex: 1;
     overflow-y: auto;
-
     padding: 24px;
   }
 
-  /* Make form use full width */
   .add-user-body>div,
   .add-user-body .card,
   .add-user-body form {
@@ -289,7 +343,6 @@
     max-width: none;
   }
 
-  /* Better scrollbar */
   .add-user-body::-webkit-scrollbar {
     width: 8px;
   }
@@ -297,5 +350,85 @@
   .add-user-body::-webkit-scrollbar-thumb {
     border-radius: 10px;
     background: rgba(255, 255, 255, .2);
+  }
+
+  /* ── Expandable rows ── */
+  .worker-main-row:hover td {
+    background: rgba(255, 255, 255, .03);
+  }
+
+  .worker-main-row.row-expanded td {
+    background: rgba(200, 168, 75, .06);
+  }
+
+  .expand-arrow {
+    display: inline-block;
+    font-size: 10px;
+    color: var(--text-dim);
+    transition: transform .2s ease;
+  }
+
+  .expand-arrow.expanded {
+    transform: rotate(180deg);
+  }
+
+  .detail-row td {
+    padding: 0 !important;
+  }
+
+  .worker-detail-panel {
+    background: rgba(0, 0, 0, .25);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 20px 24px;
+    animation: slideDown .15s ease;
+  }
+
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-6px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 24px;
+  }
+
+  .detail-section-title {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .8px;
+    color: var(--accent);
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-bottom: 8px;
+  }
+
+  .detail-label {
+    font-size: 10px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: .5px;
+  }
+
+  .detail-value {
+    font-size: 13px;
+    color: var(--text-cream);
   }
 </style>

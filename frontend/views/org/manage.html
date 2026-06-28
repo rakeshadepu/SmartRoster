@@ -15,7 +15,10 @@
           + Add User
         </a>
       </div> -->
-      <button class="btn btn-primary" ng-click="showCreateForm = !showCreateForm">
+      <!-- <button class="btn btn-primary" ng-click="showCreateForm = !showCreateForm">
+        + Add Worker
+      </button> -->
+      <button class="btn btn-primary" ng-click="openAddWorker()">
         + Add Worker
       </button>
     </div>
@@ -45,7 +48,7 @@
 
       <!-- New worker credentials (shown once) -->
       <div class="password-reveal" ng-if="createdCred">
-        <h4>⚠ Save these credentials — the password will NOT be shown again</h4>
+        <h4> Save these credentials — the password will NOT be shown again</h4>
         <div class="credential-row">
           <div>
             <div class="credential-label">Worker</div>
@@ -73,7 +76,7 @@
           </div>
           <button class="credential-copy" ng-click="copyText(createdCred.join_url, $event)">Copy</button>
         </div>
-        <button class="btn btn-sm btn-secondary mt-8" ng-click="createdCred = null">Dismiss</button>
+        <button class="btn btn-sm btn-secondary mt-8" ng-click="dismissCred()" >Dismiss</button>
       </div>
 
       <!-- Filter bar -->
@@ -85,24 +88,25 @@
           <option value="PART_TIME">Part Time</option>
           <option value="MINIJOB">Mini Job</option>
         </select>
-        <select class="form-control" ng-model="filter.is_active" ng-change="applyFilter()" style="width:130px">
-          <option value="">All status</option>
-          <option value="true">Active</option>
-          <option value="false">Inactive</option>
-        </select>
+        
       </div>
 
+      <!-- Workers table -->
       <!-- Workers table -->
       <div class="card">
         <div class="table-wrap">
           <table class="data-table">
             <thead>
               <tr>
-                <th>Name</th>
+                <th ng-click="setSort('full_name')" style="cursor:pointer;user-select:none;white-space:nowrap">
+                  Name <span class="sort-icon">{{sortIcon('full_name')}}</span>
+                </th>
                 <th>User ID</th>
                 <th>Work Type</th>
                 <th>Hours/Wk</th>
-                <th>Status</th>
+                <th ng-click="setSort('joined_at')" style="cursor:pointer;user-select:none;white-space:nowrap">
+                  Joined <span class="sort-icon">{{sortIcon('joined_at')}}</span>
+                </th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -113,24 +117,27 @@
               <tr ng-if="!loading && workers.length === 0">
                 <td colspan="6" class="text-dim text-sm">No workers found.</td>
               </tr>
-              <tr ng-repeat="w in workers">
+              <tr ng-repeat="w in workers
+                             | orderBy: sortBy : sortDesc">
                 <td class="fw-600 text-cream">{{w.full_name}}</td>
                 <td class="mono text-sm text-dim">{{w.user_id}}</td>
-                <td><span class="badge" ng-class="workTypeBadge(w.work_type)">{{w.work_type.replace('_',' ')}}</span>
+                <td>
+                  <span class="badge" ng-class="workTypeBadge(w.work_type)">
+                    {{w.work_type.replace('_',' ')}}
+                  </span>
                 </td>
                 <td class="text-dim">{{w.weekly_hours}}h</td>
-                <td>
-                  <span class="badge" ng-class="w.is_active ? 'badge-green' : 'badge-red'">
-                    {{w.is_active ? 'Active' : 'Inactive'}}
-                  </span>
+                <td class="text-dim text-sm" style="white-space:nowrap">
+                  <span ng-if="w.joined_at">{{w.joined_at}}</span>
+                  <span ng-if="!w.joined_at" class="text-dim" style="opacity:.45">—</span>
                 </td>
                 <td>
                   <div class="td-actions">
-                    <button class="btn btn-sm btn-secondary btn-icon" ng-click="openEdit(w)" title="Edit">✎</button>
-                    <button class="btn btn-sm btn-secondary btn-icon" ng-click="resetPassword(w)"
-                      title="Reset password">🔑</button>
-                    <button class="btn btn-sm btn-danger btn-icon" ng-click="deactivate(w)" ng-if="w.is_active"
-                      title="Deactivate">✕</button>
+                    <button class="btn btn-sm btn-secondary btn-icon" ng-click="openEdit(w)" title="Edit">Edit</button>
+                    <button class="btn btn-sm btn-secondary btn-icon" ng-click="openChangePassword(w)"
+                      title="Change Password">Change Password</button>
+                    <button class="btn btn-sm btn-danger btn-icon" ng-click="deactivate(w)"
+                      title="Delete Worker">Delete</button>
                   </div>
                 </td>
               </tr>
@@ -163,13 +170,13 @@
           <option value="MINIJOB">Mini Job (10h)</option>
         </select>
       </div>
-      <div class="form-group">
+      <!-- <div class="form-group">
         <label class="form-label">Status</label>
         <select class="form-control" ng-model="editWorker.is_active">
           <option ng-value="true">Active</option>
           <option ng-value="false">Inactive</option>
         </select>
-      </div>
+      </div> -->
       <div class="form-group">
         <label class="form-label">Email Address</label>
         <input type="email" class="form-control" ng-model="editWorker.email" placeholder="worker@example.com">
@@ -310,11 +317,53 @@
     </div>
 
     <div class="modal-body add-user-body">
-      <div ng-include="'views/org/add-user.html'"></div>
+      <div ng-controller="AddUserCtrl" ng-include="'views/org/add-user.html'"></div>
     </div>
 
   </div>
 </div>
+
+<!-- Change Password Modal -->
+<div class="modal-overlay" ng-if="changePassModal">
+  <div class="modal" style="max-width:440px;width:100%">
+    <div class="modal-header">
+      <div class="modal-title">Change Password — {{changePassWorker.full_name}}</div>
+      <button class="modal-close" ng-click="closeChangePassModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-error" ng-if="changePassError" style="margin-bottom:14px">
+        ⚠ {{changePassError}}
+      </div>
+      <div class="form-group">
+        <label class="form-label">Current Password</label>
+        <input type="password" class="form-control" ng-model="changePassForm.current_password"
+          placeholder="Enter current password">
+      </div>
+      <div class="form-group">
+        <label class="form-label">New Password</label>
+        <input type="password" class="form-control" ng-model="changePassForm.new_password"
+          placeholder="Min. 6 characters">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Confirm New Password</label>
+        <input type="password" class="form-control" ng-model="changePassForm.confirm_password"
+          placeholder="Repeat new password"
+          ng-keydown="$event.keyCode === 13 && !changePassSaving && saveChangePassword()">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" ng-click="closeChangePassModal()" ng-disabled="changePassSaving">Cancel</button>
+      <button class="btn btn-primary" ng-click="saveChangePassword()" ng-disabled="changePassSaving || !changePassForm.current_password
+                           || !changePassForm.new_password || !changePassForm.confirm_password">
+        <span ng-if="changePassSaving" style="display:flex;align-items:center;gap:6px">
+          <span class="spinner"></span> Saving…
+        </span>
+        <span ng-if="!changePassSaving">Update Password</span>
+      </button>
+    </div>
+  </div>
+</div>
+
 
 <style>
   /* Fullscreen overlay */
@@ -351,6 +400,18 @@
 
     padding: 24px;
 }
+
+.sort-icon {
+  font-size: 11px;
+  opacity: 0.6;
+  margin-left: 3px;
+  }
+  th[ng-click]:hover {
+    color: var(--text-cream);
+  }
+  th[ng-click]:hover .sort-icon {
+    opacity: 1;
+  }
 
 /* Make form use full width */
 .add-user-body > div,

@@ -86,8 +86,8 @@
                 <div class="text-xs text-dim mt-4">{{selected.total_shifts}} shifts · {{selected.week_start}} → {{selected.week_end}}</div>
               </div>
               <div class="flex gap-8">
-                <button class="btn btn-sm btn-secondary" ng-click="viewMode='grid'" ng-class="viewMode==='grid' ? 'btn-primary' : 'btn-secondary'">Grid</button>
-                <button class="btn btn-sm btn-secondary" ng-click="loadHtmlView()" ng-class="viewMode==='html' ? 'btn-primary' : 'btn-secondary'">Preview</button>
+                <button class="btn btn-sm" ng-click="viewMode='grid'" ng-class="viewMode==='grid' ? 'btn-primary' : 'btn-secondary'">Grid</button>
+                <!-- <button class="btn btn-sm btn-secondary" ng-click="loadHtmlView()" ng-class="viewMode==='html' ? 'btn-primary' : 'btn-secondary'">Preview</button> -->
                 <button class="btn btn-sm btn-accent" ng-click="downloadPdf()">⬇ PDF</button>
                 <button class="btn btn-sm btn-primary" ng-click="publish()" ng-if="selected.status !== 'PUBLISHED'">Publish</button>
               </div>
@@ -95,11 +95,11 @@
           </div>
 
           <!-- HTML preview -->
-          <div class="card" ng-if="viewMode === 'html' && htmlView" style="padding:0">
-            <div style="padding:16px; overflow:auto; max-height:70vh">
+          <!-- <div class="card" ng-show="viewMode === 'html'">
+            <div style="padding:16px;overflow:auto;max-height:70vh">
               <div ng-bind-html="htmlView"></div>
             </div>
-          </div>
+          </div> -->
 
           <!-- Grid view -->
           <div class="card" ng-if="viewMode === 'grid'">

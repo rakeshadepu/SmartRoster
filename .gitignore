@@ -79,3 +79,8 @@ Thumbs.db
 *.swp
 *.bak
 *.tmp
+
+# ----------------------
+# TEST FILES
+# ----------------------
+testing/

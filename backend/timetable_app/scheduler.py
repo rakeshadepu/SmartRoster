@@ -165,7 +165,7 @@ def generate_timetable(
         User.objects.filter(
             org=org,
             role=User.Role.WORKER,
-            is_active=True,
+            # is_active=True,
         ).select_related('org')
     )
 
@@ -190,7 +190,7 @@ def generate_timetable(
     # ------------------------------------------------------------------
     avail_qs = Availability.objects.filter(
         worker__org=org,
-        worker__is_active=True,
+        # worker__is_active=True,
         week_start=week_start,
     ).select_related('worker')
 
