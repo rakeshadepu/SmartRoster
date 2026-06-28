@@ -1,169 +1,256 @@
 # SmartRoster – Workforce Scheduling System
 
-## Overview
-
-SmartRoster is a full-stack web application designed to manage employee scheduling efficiently. It allows organizations such as shops, schools, or small companies to assign working hours based on employee preferences, contract types, and operational constraints.
-
-The system ensures fair distribution of work hours while respecting individual availability and company policies.
+SmartRoster is a full-stack workforce scheduling application that helps organizations efficiently manage employee shifts. It enables managers to create schedules based on employee availability, contract types, and business operating hours while ensuring a fair distribution of working hours.
 
 ---
 
-## Tech Stack
+# Features
 
-* Backend: Django (Python)
-* Frontend: AngularJS
-* Database: SQLite (development)
-* Authentication: Django Authentication System
-* PDF Generation: ReportLab / WeasyPrint (development)
-
----
-
-## Features
-
-### Admin (Manager Role)
+## Admin (Manager)
 
 * Create, update, and delete workers
-* Assign roles:
+* Assign employment types:
 
   * Full-Time (40 hrs/week)
   * Part-Time (20 hrs/week)
   * Mini Job (10 hrs/week)
-* Set shop opening and closing hours
-* Generate weekly timetable automatically
-* Modify worker profiles and permissions
-* Export timetable as PDF
-* View digital timetable dashboard
+* Configure organization opening and closing hours
+* Automatically generate weekly schedules
+* Manage worker accounts and permissions
+* View schedules through a web dashboard
+* Export schedules as PDF
+
+## Worker
+
+* Log in using assigned credentials
+* Submit weekly availability
+* View assigned schedules
+* Update personal profile information
+* Change password
 
 ---
 
-### Worker (User Role)
+# Tech Stack
 
-* Login with assigned credentials
-* Select available working days and times
-* Submit weekly availability before deadline (e.g., Saturday)
-* View assigned schedule
-* Update personal profile (limited access)
-
----
-
-## Authentication Flow
-
-* Workers are created by the admin
-* System auto-generates:
-
-  * User ID
-  * Default password
-* Workers must log in and can later update their password
+| Component      | Technology             |
+| -------------- | ---------------------- |
+| Backend        | Django (Python)        |
+| Frontend       | AngularJS              |
+| Database       | SQLite                 |
+| Authentication | Django Authentication  |
+| PDF Generation | ReportLab / WeasyPrint |
 
 ---
 
-## Core Functionalities
-
-### 1. Employee Management (CRUD)
-
-* Add new workers
-* Assign role & working hour limits
-* Delete or update workers
-
-### 2. Availability Submission
-
-* Workers select:
-
-  * Start date
-  * Preferred working time slots
-
-### 3. Smart Scheduling Algorithm
-
-* Generates timetable based on:
-
-  * Worker preferences
-  * Weekly hour limits
-  * Shop working hours
-* Ensures fair distribution of shifts
-
-### 4. Timetable Generation
-
-* Weekly schedule auto-generated
-* Export options:
-
-  * PDF timetable
-  * Web dashboard view
-
----
-
-## Database Models (Simplified)
+# Database Models
 
 * User (Abstract Django User)
 * WorkerProfile
 
-  * Role (Full-time, Part-time, Mini job)
-  * Weekly hour limit
+  * Employment Type
+  * Weekly Hour Limit
 * Availability
 
   * Date
-  * Start time
-  * End time
+  * Start Time
+  * End Time
 * Schedule
-
-  * Assigned shifts
 * OrganisationSettings
 
-  * Opening time
-  * Closing time
+---
+
+# Project Structure
+
+```text
+SmartRoster/
+│
+├── backend/
+│   ├── manage.py
+│   ├── requirements.txt
+│   └── ...
+│
+├── frontend/
+│   ├── index.html
+│   ├── app/
+│   └── ...
+│
+├── CONTRIBUTING.md
+├── LICENSE
+└── README.md
+```
 
 ---
 
-## System Workflow
+# Installation
 
-1. Admin creates workers
-2. Workers receive login credentials
-3. Workers submit availability before deadline
-4. System processes data
-5. Timetable is generated automatically
-6. Admin reviews & exports schedule
+## 1. Clone the Repository
 
----
+```bash
+git clone https://github.com/<your-username>/SmartRoster.git
+cd SmartRoster
+```
 
-## Constraints & Rules
+## 2. Create a Virtual Environment
 
-* Workers cannot modify schedules after submission
-* Only admins can edit or delete users
-* Weekly hour limits must be respected
-* Scheduling must fit within business/organisation hours
+```bash
+python -m venv venv
+```
 
----
+Activate it.
 
-## Installation (Basic)
+**Windows**
 
-* The project is at initial stage, so installation steps can be added soon. 
+```bash
+venv\Scripts\activate
+```
 
----
+**Linux/macOS**
 
-## Future Improvements
-
-* AI-based scheduling optimization
-* Mobile app version
-* Notifications (email/SMS)
-* Leave management system
-* Multi-branch support
+```bash
+source venv/bin/activate
+```
 
 ---
 
-## Use Cases
+## 3. Install Backend Dependencies
 
-* Retail shops
+```bash
+cd backend
+pip install -r requirements.txt
+```
+
+---
+
+## 4. Run Database Migrations
+
+```bash
+python manage.py migrate
+```
+
+---
+
+## 5. Start the Django Backend
+
+```bash
+python manage.py runserver
+```
+
+The backend runs at:
+
+```text
+http://127.0.0.1:8000/
+```
+
+---
+
+## 6. Start the AngularJS Frontend
+
+Open a new terminal.
+
+```bash
+cd frontend
+http-server
+```
+
+The frontend will run on the URL displayed by `http-server` (commonly `http://127.0.0.1:8080`).
+
+---
+
+# System Workflow
+
+1. Admin creates worker accounts.
+2. Workers receive login credentials.
+3. Workers submit weekly availability.
+4. The scheduling algorithm processes availability.
+5. Weekly schedules are generated automatically.
+6. Managers review and export schedules.
+
+---
+
+# Scheduling Rules
+
+* Workers cannot modify availability after the submission deadline.
+* Only administrators can manage users.
+* Weekly hour limits are enforced.
+* Shifts must fall within organization operating hours.
+* The scheduling algorithm aims to distribute work fairly among employees.
+
+---
+
+# Future Improvements
+
+* AI-powered scheduling optimization
+* Leave management
+* Email notifications
+* SMS notifications
+* Mobile application
+* Multi-branch organization support
+* Calendar synchronization
+* Shift swapping between employees
+
+---
+
+# Use Cases
+
+SmartRoster can be used by:
+
+* Retail stores
 * Restaurants
 * Schools
+* Hospitals
 * Small businesses
+* Warehouses
+* Offices
 
 ---
 
-## Author
+# Contributing
 
-Rakesh Adepu
+Contributions are welcome!
+
+If you would like to contribute:
+
+1. Fork the repository.
+2. Create a feature or fix branch.
+3. Commit your changes.
+4. Submit a Pull Request.
+
+Please read the [CONTRIBUTING.md](CONTRIBUTING.md) file before contributing.
 
 ---
 
-## License
+# Reporting Issues
 
-MIT License
+Found a bug or have a feature request?
+
+Please open a GitHub Issue describing:
+
+* The problem
+* Steps to reproduce
+* Expected behavior
+* Screenshots (if applicable)
+
+---
+
+# Roadmap
+
+* User authentication improvements
+* Automatic conflict detection
+* AI-assisted scheduling
+* Multi-language support
+* Employee leave management
+* Dashboard analytics
+
+---
+
+# Author
+
+**Rakesh Adepu**
+
+---
+
+# License
+
+This project is licensed under the MIT License.
+
+See the [LICENSE](LICENSE) file for details.
