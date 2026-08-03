@@ -67,6 +67,15 @@ angular.module("TimetableApp").controller("OrgWorkersCtrl", [
       };
     };
 
+    // ── roleBadge helper ──────────────────────────────────────────────────────
+    $scope.roleBadge = function (role) {
+      return {
+        "badge-purple": role === "ADMIN",
+        "badge-blue": role === "MANAGER",
+        "badge-gray": role === "WORKER",
+      };
+    };
+
     // ── Load ─────────────────────────────────────────────────────────────────
     function loadWorkers() {
       $scope.loading = true;
@@ -121,6 +130,8 @@ angular.module("TimetableApp").controller("OrgWorkersCtrl", [
         first_name: worker.full_name.split(" ")[0] || "",
         last_name: worker.full_name.split(" ").slice(1).join(" ") || "",
         email: worker.email || "",
+        employee_code: worker.employee_code || "",
+        role: worker.role || "WORKER",
         work_type: worker.work_type || "FULL_TIME",
         // phone/dob/nationality may not be returned by list endpoint;
         // pass what we have — AddUserCtrl will fill the rest as empty

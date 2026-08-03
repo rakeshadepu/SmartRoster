@@ -1,12 +1,18 @@
 """
 Django settings for Timetable Planner project.
-Phase 1 — Foundation with SQLite
+Phase 2 — Cloud PostgreSQL (Supabase)
 """
 
 from pathlib import Path
 from datetime import timedelta
+import os
+import dj_database_url
+from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load environment variables from .env (place it in the backend/ folder, next to manage.py)
+load_dotenv(BASE_DIR / '.env')
 
 SECRET_KEY = 'django-insecure-timetable-planner-change-this-in-production-xyz123'
 
@@ -66,14 +72,26 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 # ---------------------------------------------------------------------------
-# Database — SQLite
+# Database — Supabase PostgreSQL (cloud)
 # ---------------------------------------------------------------------------
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+DATABASE_URL = os.getenv('DATABASE_URL')
+
+if DATABASE_URL:
+    DATABASES = {
+        'default': dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=600,
+            ssl_require=True,   # Supabase requires SSL
+        )
     }
-}
+else:
+    # Fallback to local SQLite if no DATABASE_URL is set (e.g. running tests locally)
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 # ---------------------------------------------------------------------------
 # Custom User Model

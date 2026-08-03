@@ -135,7 +135,7 @@ print('\n  Hour Limits:')
 for wt, hrs in LIMITS:
     print(f'    {wt:<12}: {hrs} hrs/week')
 
-print(f'\n  ✅ Phase 1 seed complete. Start the server:')
+print(f'\n    Phase 1 seed complete. Start the server:')
 print(f'     cd backend && python manage.py runserver')
 print(f'\n  📡 API base URL: http://127.0.0.1:8000/api/')
 print(f'  🛠  Django Admin: http://127.0.0.1:8000/admin/')
@@ -150,9 +150,9 @@ start = time.time()
 test_ids = {generate_user_id() for _ in range(10_000)}
 elapsed = time.time() - start
 print(f'  Generated 10,000 IDs in {elapsed:.3f}s')
-print(f'  Unique IDs: {len(test_ids)} (collision-free ✅)')
+print(f'  Unique IDs: {len(test_ids)} (collision-free  )')
 print(f'  Sample IDs:')
 for uid in list(test_ids)[:5]:
     validate_user_id(uid)
-    print(f'    {uid}  ← all chars in Base64url alphabet ✅')
+    print(f'    {uid}  ← all chars in Base64url alphabet  ')
 print()

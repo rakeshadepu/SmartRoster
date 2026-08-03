@@ -22,7 +22,12 @@ angular.module("TimetableApp").controller("OrgSettingsCtrl", [
     $scope.loading = true;
     $scope.saving = false;
     $scope.error = null;
-    $scope.shopForm = { shop_open: "", shop_close: "" };
+    $scope.businessHours = [];
+    $scope.dayLabels = {
+      MON: "Monday", TUE: "Tuesday", WED: "Wednesday", THU: "Thursday",
+      FRI: "Friday", SAT: "Saturday", SUN: "Sunday",
+    };
+    $scope.dayOrder = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
     $scope.limitsForm = { FULL_TIME: 40, PART_TIME: 20, MINIJOB: 10 };
     $scope.settingsForm = {
       name: "",
@@ -61,8 +66,13 @@ angular.module("TimetableApp").controller("OrgSettingsCtrl", [
       ApiService.orgSettings(orgId).then(function (res) {
         // ← was getOrg
         $scope.org = res.data.organisation;
-        $scope.shopForm.shop_open = ($scope.org.shop_open || "").slice(0, 5);
-        $scope.shopForm.shop_close = ($scope.org.shop_close || "").slice(0, 5);
+        $scope.businessHours = ($scope.org.business_hours || []).slice().sort(function (a, b) {
+          return $scope.dayOrder.indexOf(a.day_of_week) - $scope.dayOrder.indexOf(b.day_of_week);
+        });
+        $scope.businessHours.forEach(function (bh) {
+          bh.open_time = (bh.open_time || "").slice(0, 5);
+          bh.close_time = (bh.close_time || "").slice(0, 5);
+        });
         $scope.settingsForm.name = $scope.org.name || "";
         $scope.settingsForm.email = $scope.org.email || "";
         AuthService.saveOrgSession(AuthService.getOrgToken(), $scope.org);
@@ -146,18 +156,21 @@ angular.module("TimetableApp").controller("OrgSettingsCtrl", [
         });
     };
 
-    $scope.saveShopHours = function () {
+    $scope.saveDayHours = function (day) {
       $scope.saving = true;
-      ApiService.orgUpdate(orgId, $scope.shopForm) // ← was updateOrg
-        .then(function (res) {
-          $scope.org = res.data.organisation;
-          showToast("Shop hours updated.");
+      ApiService.setBusinessHours({
+        day_of_week: day.day_of_week,
+        open_time: day.open_time,
+        close_time: day.close_time,
+      })
+        .then(function () {
+          showToast($scope.dayLabels[day.day_of_week] + " hours updated.");
         })
         .catch(function (err) {
           showErrorToast(
             err.data && err.data.errors
               ? JSON.stringify(err.data.errors)
-              : "Failed to save shop hours.",
+              : "Failed to save business hours.",
           );
         })
         .finally(function () {

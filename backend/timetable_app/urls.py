@@ -95,6 +95,20 @@ urlpatterns = [
          name='work-limits'),
 
     # =========================================================
+    # BUSINESS HOURS
+    # =========================================================
+    path('business-hours/',
+         views.BusinessHoursView.as_view(),
+         name='business-hours'),
+
+    # =========================================================
+    # BUSINESS HOURS
+    # =========================================================
+    path('business-hours/',
+         views.BusinessHoursView.as_view(),
+         name='business-hours'),
+
+    # =========================================================
     # AVAILABILITY
     # =========================================================
     path('availability/',

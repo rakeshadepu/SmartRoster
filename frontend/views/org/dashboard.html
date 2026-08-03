@@ -8,7 +8,7 @@
         <div class="page-title">Employee Management</div>
         <div class="page-sub">
           {{org.name}} &nbsp;·&nbsp;
-          Shop {{(org.shop_open || '').slice(0,5)}} – {{(org.shop_close || '').slice(0,5)}}
+          Today {{(todayHours().open_time || '').slice(0,5)}} – {{(todayHours().close_time || '').slice(0,5)}}
         </div>
       </div>
       <button class="btn btn-primary" ng-click="showCreateForm = !showCreateForm">
@@ -86,9 +86,9 @@
           <div class="stat-sub">40 h / week</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Shop Hours</div>
-          <div class="stat-value" style="font-size:16px">{{(org.shop_open || '').slice(0,5)}}</div>
-          <div class="stat-sub">to {{(org.shop_close || '').slice(0,5)}}</div>
+          <div class="stat-label">Today's Hours</div>
+          <div class="stat-value" style="font-size:16px">{{(todayHours().open_time || '').slice(0,5)}}</div>
+          <div class="stat-sub">to {{(todayHours().close_time || '').slice(0,5)}}</div>
         </div>
       </div>
 

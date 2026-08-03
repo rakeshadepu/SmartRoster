@@ -31,6 +31,7 @@ angular.module("TimetableApp").controller("AddUserCtrl", [
         last_name: "",
         email: "",
         phone: "",
+        employee_code: "",
         role: "WORKER",
         work_type: "",
         nationality: "",
@@ -46,6 +47,11 @@ angular.module("TimetableApp").controller("AddUserCtrl", [
     }
 
     $scope.form = blankForm();
+    $scope.roles = [
+      { value: "WORKER", label: "Worker" },
+      { value: "MANAGER", label: "Manager" },
+      { value: "ADMIN", label: "Admin" },
+    ];
 
     $scope.countries = [
       { name: "Argentina", code: "+54", digits: 10, flag: "🇦🇷" },
@@ -110,7 +116,8 @@ angular.module("TimetableApp").controller("AddUserCtrl", [
         last_name: workerData.last_name || "",
         email: workerData.email || "",
         phone: workerData.phone || "",
-        role: "WORKER",
+        employee_code: workerData.employee_code || "",
+        role: workerData.role || "WORKER",
         work_type: workerData.work_type || "FULL_TIME",
         nationality: workerData.nationality || "",
         dob: workerData.dob || "",

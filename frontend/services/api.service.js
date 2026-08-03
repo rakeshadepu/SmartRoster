@@ -53,6 +53,10 @@ angular.module("TimetableApp").service("ApiService", [
     this.getLimits = () => $http.get(`${B}/work-limits/`);
     this.setLimit = (data) => $http.post(`${B}/work-limits/`, data);
 
+    // ── Business hours (per day of week) ────────────────────────────────
+    this.getBusinessHours = () => $http.get(`${B}/business-hours/`);
+    this.setBusinessHours = (data) => $http.post(`${B}/business-hours/`, data);
+
     // ── Workers  →  /api/org/<orgId>/workers/  and  /workers/<userId>/ ───
     this.getPublicWorkers = (orgId) =>
       $http.get(`${B}/org/${orgId}/workers/public/`);

@@ -23,7 +23,7 @@
           </div>
         </div>
         <div class="alert alert-warn" style="font-size:12px;margin:14px 0">
-          ⚠ Password shown once only. The user logs in at
+           Password shown once only. The user logs in at
           <strong>#/org/{{orgId}}/join</strong> with their User ID.
         </div>
         <div class="flex gap-8">
@@ -54,7 +54,7 @@
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">Date of Birth</label>
-                <input type="date" class="form-control" ng-model="form.dob">
+                <input title="D.O.B" type="date" class="form-control" ng-model="form.dob">
               </div>
               <div class="form-group">
                 <label class="form-label">Nationality</label>
@@ -77,7 +77,7 @@
                 <span class="text-xs text-dim" style="text-transform:none;letter-spacing:0"> — globally unique</span>
               </label>
               <div style="display: grid; grid-template-columns: 90px 1fr; gap: 10px">
-                <select class="form-control" style="flex-shrink:0"
+                <select title="Country Code" class="form-control" style="flex-shrink:0"
                         ng-model="selectedCountry"
                         ng-options="c as (c.flag + ' ' + c.name + ' (' + c.code + ')') for c in countries track by c.code"
                         ng-change="onCountryChange()">
@@ -101,13 +101,18 @@
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">Role *</label>
-                <select class="form-control" ng-model="form.role">
-                  <option value="WORKER">Worker</option>
+                <select title="Role" class="form-control" ng-model="form.role">
+                  <option ng-repeat="r in roles" value="{{r.value}}">{{r.label}}</option>
                 </select>
               </div>
               <div class="form-group">
+                <label class="form-label">Employee Code</label>
+                <input type="text" class="form-control" ng-model="form.employee_code"
+                       placeholder="Optional — payroll / badge number">
+              </div>
+              <div class="form-group">
                 <label class="form-label">Work Type *</label>
-                <select class="form-control" ng-model="form.work_type">
+                <select title="Employment type" class="form-control" ng-model="form.work_type">
                   <option value="" disabled selected>
                     Select Employment Type
                   </option>

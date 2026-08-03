@@ -6,6 +6,7 @@ Phase 1: Foundation models
 
 Models defined here:
     - Organisation          Company / school using the planner
+    - BusinessHours         Per-org, per-day-of-week opening/closing time
     - WorkTypeLimit         Per-org weekly hour caps per employment type
     - User                  Workers (JWT-authenticated staff members)
     - Availability          Worker-declared availability per day per week
@@ -118,7 +119,8 @@ class Organisation(models.Model):
     Notes:
         - No is_active field. Organisations are never soft-deleted here.
         - password stores a bcrypt hash via set_password() / check_password().
-        - shop_open / shop_close drive shift scheduling constraints.
+        - Operating hours live on BusinessHours (one row per day of week),
+          not on this model — use get_hours_for_day() to look them up.
     """
 
     org_id       = models.CharField(
@@ -155,16 +157,6 @@ class Organisation(models.Model):
     country      = models.CharField(max_length=100, blank=True, default='')
     zip_code     = models.CharField(max_length=20,  blank=True, default='')
 
-    # -- Operating hours (used as scheduling bounds for shifts) --
-    shop_open    = models.TimeField(
-                       default='08:00',
-                       help_text='Daily opening time (HH:MM) — no shift may start before this'
-                   )
-    shop_close   = models.TimeField(
-                       default='20:00',
-                       help_text='Daily closing time (HH:MM) — no shift may end after this'
-                   )
-
     created_at   = models.DateTimeField(auto_now_add=True)
     updated_at   = models.DateTimeField(auto_now=True)
 
@@ -186,12 +178,72 @@ class Organisation(models.Model):
         return check_password(raw_password, self.password)
 
     def __str__(self):
-        return f'{self.name} <{self.email}> ({self.shop_open}–{self.shop_close})'
+        return f'{self.name} <{self.email}>'
+
+    def get_hours_for_day(self, day_code):
+        """
+        Look up (open_time, close_time) for a given day_code (e.g. 'MON').
+
+        Falls back to 08:00–20:00 if no BusinessHours row exists for that
+        day yet, so orgs that haven't configured hours still work.
+        """
+        from datetime import time
+        try:
+            bh = self.business_hours.get(day_of_week=day_code)
+            return bh.open_time, bh.close_time
+        except BusinessHours.DoesNotExist:
+            return time(8, 0), time(20, 0)
 
     class Meta:
         ordering            = ['name']
         verbose_name        = 'Organisation'
         verbose_name_plural = 'Organisations'
+
+
+# ===========================================================================
+# Business Hours
+# ===========================================================================
+
+class BusinessHours(models.Model):
+    """
+    An organisation's opening/closing time for one day of the week.
+
+    Replaces the old flat Organisation.shop_open/shop_close pair so each
+    org can configure different hours per day (e.g. closed Sundays,
+    shorter hours on Saturdays). One row per (org, day_of_week).
+    """
+
+    class Day(models.TextChoices):
+        MONDAY    = 'MON', 'Monday'
+        TUESDAY   = 'TUE', 'Tuesday'
+        WEDNESDAY = 'WED', 'Wednesday'
+        THURSDAY  = 'THU', 'Thursday'
+        FRIDAY    = 'FRI', 'Friday'
+        SATURDAY  = 'SAT', 'Saturday'
+        SUNDAY    = 'SUN', 'Sunday'
+
+    org         = models.ForeignKey(
+                      Organisation, on_delete=models.CASCADE,
+                      related_name='business_hours'
+                  )
+    day_of_week = models.CharField(max_length=3, choices=Day.choices)
+    open_time   = models.TimeField(
+                      default='08:00',
+                      help_text='Opening time (HH:MM) — no shift may start before this'
+                  )
+    close_time  = models.TimeField(
+                      default='20:00',
+                      help_text='Closing time (HH:MM) — no shift may end after this'
+                  )
+
+    def __str__(self):
+        return f'{self.org.name} | {self.get_day_of_week_display()}: {self.open_time}\u2013{self.close_time}'
+
+    class Meta:
+        unique_together     = ('org', 'day_of_week')
+        ordering            = ['org', 'day_of_week']
+        verbose_name        = 'Business Hours'
+        verbose_name_plural = 'Business Hours'
 
 
 # ===========================================================================
@@ -272,8 +324,11 @@ class User(AbstractBaseUser, PermissionsMixin):
         Globally unique across all organisations.
 
     role
-        Only one role: WORKER. Organisation management is handled via
-        Org-Token auth — no separate admin user row is needed.
+        ADMIN, MANAGER, or WORKER. Org-Token auth (Organisation.password)
+        remains the primary way an org owner logs in — role here lets an
+        org additionally promote specific User rows to ADMIN/MANAGER so
+        they can manage scheduling as a JWT-authenticated staff member.
+        Most staff are plain WORKER.
 
     org
         The organisation this worker currently belongs to.
@@ -295,7 +350,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     """
 
     class Role(models.TextChoices):
-        WORKER = 'WORKER', 'Worker'
+        ADMIN   = 'ADMIN',   'Admin'
+        MANAGER = 'MANAGER', 'Manager'
+        WORKER  = 'WORKER',  'Worker'
 
     class WorkType(models.TextChoices):
         FULL_TIME = 'FULL_TIME', 'Full Time'
@@ -303,10 +360,14 @@ class User(AbstractBaseUser, PermissionsMixin):
         MINIJOB   = 'MINIJOB',   'Mini Job'
 
     # -- Identity --
-    user_id    = models.CharField(
-                     max_length=11, unique=True, db_index=True, editable=False,
-                     help_text='Auto-generated 11-char Base64url unique identifier'
-                 )
+    user_id       = models.CharField(
+                        max_length=11, unique=True, db_index=True, editable=False,
+                        help_text='Auto-generated 11-char Base64url unique identifier'
+                    )
+    employee_code = models.CharField(
+                        max_length=30, unique=True, blank=True, null=True,
+                        help_text='Org-facing employee code/badge number, e.g. for payroll or a badge'
+                    )
     first_name = models.CharField(max_length=80,  blank=True, default='')
     last_name  = models.CharField(max_length=80,  blank=True, default='')
     full_name  = models.CharField(max_length=150)
@@ -417,6 +478,9 @@ class Availability(models.Model):
         - Only org admins (employees) may modify or delete entries.
 
     week_start   Always the Monday of the target week.
+    week_number  ISO week-of-year (1-53) for week_start — auto-derived on
+                 save(), handy for filtering/reporting without re-deriving
+                 it from week_start every time (e.g. "week 23 of 2026").
     start_time   The earliest time the worker can begin a shift that day.
     end_time     The latest time the worker is available to work that day.
                  Allows the scheduler to respect the worker's upper bound,
@@ -438,6 +502,10 @@ class Availability(models.Model):
                        limit_choices_to={'role': User.Role.WORKER}
                    )
     week_start   = models.DateField(help_text='Monday of the target week')
+    week_number  = models.PositiveSmallIntegerField(
+                       editable=False, blank=True,
+                       help_text='ISO week-of-year for week_start (1-53) — auto-derived on save'
+                   )
     day          = models.CharField(max_length=3, choices=Day.choices)
     start_time   = models.TimeField(help_text='Earliest available start time on this day')
     end_time     = models.TimeField(
@@ -446,11 +514,17 @@ class Availability(models.Model):
                    )
     submitted_at = models.DateTimeField(default=timezone.now)
 
+    def save(self, *args, **kwargs):
+        """Auto-derive week_number from week_start's ISO calendar before saving."""
+        if self.week_start:
+            self.week_number = self.week_start.isocalendar()[1]
+        super().save(*args, **kwargs)
+
     def __str__(self):
         end = f'–{self.end_time}' if self.end_time else ''
         return (
             f'{self.worker.full_name} | {self.get_day_display()} '
-            f'{self.week_start} @ {self.start_time}{end}'
+            f'{self.week_start} (wk {self.week_number}) @ {self.start_time}{end}'
         )
 
     class Meta:
@@ -472,17 +546,24 @@ class Timetable(models.Model):
     status:
         DRAFT      Generated but not yet visible to workers.
         PUBLISHED  Visible to all workers in the org.
+        ARCHIVED   Past timetable kept for records; no longer active.
     """
 
     class Status(models.TextChoices):
         DRAFT     = 'DRAFT',     'Draft'
         PUBLISHED = 'PUBLISHED', 'Published'
+        ARCHIVED  = 'ARCHIVED',  'Archived'
 
     org          = models.ForeignKey(
                        Organisation, on_delete=models.SET_NULL,
                        null=True, blank=True, related_name='timetables'
                    )
     week_start   = models.DateField(help_text='Monday of the timetable week')
+    generated_by = models.ForeignKey(
+                       User, on_delete=models.SET_NULL,
+                       null=True, blank=True, related_name='generated_timetables',
+                       help_text='The ADMIN/MANAGER user who triggered generation, if any'
+                   )
     generated_at = models.DateTimeField(auto_now_add=True)
     status       = models.CharField(
                        max_length=20, choices=Status.choices, default=Status.DRAFT

@@ -37,7 +37,7 @@
       <div class="login-brand">
         <div class="login-icon">🏢</div>
         <div class="login-title">{{org.name}}</div>
-        <div class="login-sub">{{org.shop_open}} – {{org.shop_close}}</div>
+        <div class="login-sub">Today {{org.shop_open}} – {{org.shop_close}}</div>
         <div class="mono text-xs text-dim" style="margin-top:3px">Org. Id: {{org.org_id}}</div>
       </div>
 
@@ -71,6 +71,8 @@
             <div class="text-xs text-dim" style="margin-top:2px">
 
               <span ng-if="u.role === 'WORKER'" style="color:var(--olive-light)">Worker</span>
+              <span ng-if="u.role === 'MANAGER'" style="color:#5dade2">Manager</span>
+              <span ng-if="u.role === 'ADMIN'" style="color:#bb8fce">Admin</span>
             </div>
           </div>
           <!-- <span class="mono text-xs text-dim">{{u.user_id}}</span> -->
@@ -90,6 +92,8 @@
             <div class="text-xs" style="margin-top:3px">
 
               <span ng-if="selectedUser.role === 'WORKER'" style="color:var(--olive-light)">Worker</span>
+              <span ng-if="selectedUser.role === 'MANAGER'" style="color:#5dade2">Manager</span>
+              <span ng-if="selectedUser.role === 'ADMIN'" style="color:#bb8fce">Admin</span>
             </div>
             <div class="mono text-xs text-dim" style="margin-top:2px">
               {{selectedUser.user_id}}

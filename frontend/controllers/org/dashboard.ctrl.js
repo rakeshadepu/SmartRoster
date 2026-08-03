@@ -20,6 +20,16 @@ angular.module("TimetableApp").controller("OrgDashboardCtrl", [
     $scope.jobHistories = {}; // keyed by user_id
     $scope.historyLoading = {}; // keyed by user_id
 
+    const DAY_CODES = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
+
+    // business_hours is now a per-day-of-week array (BusinessHours model)
+    // instead of a flat shop_open/shop_close pair on the org itself.
+    $scope.todayHours = function () {
+      if (!$scope.org || !$scope.org.business_hours) return null;
+      const todayCode = DAY_CODES[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1];
+      return $scope.org.business_hours.find((d) => d.day_of_week === todayCode) || null;
+    };
+
     $scope.toggleExpand = function (userId) {
       if ($scope.expandedId === userId) {
         $scope.expandedId = null;

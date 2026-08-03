@@ -73,10 +73,18 @@ angular.module("TimetableApp").controller("OrgLoginCtrl", [
       $scope.error   = null;
       $scope.loading = true;
 
-      var loginPromise = orgId
-        ? ApiService.orgLogin(orgId, $scope.form.identifier, $scope.form.password)
-        : ApiService.orgLoginGlobal($scope.form.identifier, $scope.form.password);
-
+      var loginPromise =
+        orgId && orgId !== "login"
+          ? ApiService.orgLogin(
+              orgId,
+              $scope.form.identifier,
+              $scope.form.password,
+            )
+          : ApiService.orgLoginGlobal(
+              $scope.form.identifier,
+              $scope.form.password,
+          );
+      
       loginPromise
         .then(function (res) {
           var org = res.data.organisation;

@@ -4,10 +4,13 @@ permissions.py — Timetable Planner
 Custom DRF permission classes.
 
 Authentication model:
-  - Workers log in with JWT (POST /api/auth/login/).
-    All JWT-authenticated users are workers — there is no EMPLOYEE role.
+  - All staff log in with JWT (POST /api/auth/login/) — User.role is one
+    of ADMIN, MANAGER, or WORKER. Most staff are plain WORKER; ADMIN/MANAGER
+    are staff promoted to manage scheduling for their org via JWT instead
+    of the org's own Org-Token (see IsOrgAdminOrStaffRole).
   - Organisation admins authenticate with Org-Token (POST /api/org/<id>/login/).
-    Org-Token is issued to the Organisation itself, not to a User row.
+    Org-Token is issued to the Organisation itself, not to a User row, and
+    always has full admin access regardless of any User.role.
 
 ┌─────────────────────────────┬───────────┬────────┐
 │ Action                      │ Org Admin │ Worker │
@@ -169,6 +172,44 @@ class IsOrgAdminOrReadOnly(BasePermission):
             return False
         if request.method in SAFE_METHODS:
             return True
+        return False
+
+
+class IsOrgAdminOrStaffRole(BasePermission):
+    """
+    Grants access to:
+      - Org-Token requests (the org owner), or
+      - JWT-authenticated Users whose role is ADMIN or MANAGER — staff
+        promoted by the org to manage scheduling without needing the
+        org's own Org-Token.
+
+    Plain WORKER-role JWT users are denied. When authorized via JWT,
+    request.org is set to request.user.org so downstream view logic
+    (which expects request.org, matching the Org-Token path) works
+    unchanged for both auth methods.
+    """
+    message = 'Requires an Org-Token, or an ADMIN/MANAGER staff account.'
+
+    def has_permission(self, request, view):
+        auth = request.META.get('HTTP_AUTHORIZATION', '')
+        if auth.startswith('Org-Token '):
+            token_str = auth.split(' ', 1)[1].strip()
+            from timetable_app.models import OrgToken
+            try:
+                tok = OrgToken.objects.select_related('org').get(token=token_str)
+                if tok.is_expired:
+                    tok.delete()
+                    return False
+                request.org = tok.org
+                return True
+            except OrgToken.DoesNotExist:
+                return False
+
+        if request.user and request.user.is_authenticated:
+            from timetable_app.models import User
+            if request.user.role in (User.Role.ADMIN, User.Role.MANAGER):
+                request.org = request.user.org
+                return request.org is not None
         return False
 
 

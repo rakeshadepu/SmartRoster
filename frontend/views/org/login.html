@@ -22,7 +22,7 @@
       <div class="login-icon"><i class="fa-solid fa-timeline"></i></div>
       <div class="login-title" ng-if="org">{{org.name}}</div>
       <div class="login-title" ng-if="!org">Organisation Login</div>
-      <div class="login-sub" ng-if="org">Shop {{org.shop_open}} – {{org.shop_close}}</div>
+      <div class="login-sub" ng-if="org">Today {{org.shop_open}} – {{org.shop_close}}</div>
       <div class="login-sub" ng-if="!org">Sign in to manage your team</div>
       <div class="mono text-xs text-dim" style="margin-top:4px" ng-if="orgId">Org. Id: {{orgId}}</div>
     </div>

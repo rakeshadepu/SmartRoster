@@ -5,13 +5,28 @@ Useful during development for inspecting data and creating the first employee ac
 
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from timetable_app.models import Organisation, WorkTypeLimit, User, Availability, Timetable, Shift
+from timetable_app.models import (
+    Organisation, BusinessHours, WorkTypeLimit, User, Availability, Timetable, Shift
+)
+
+
+class BusinessHoursInline(admin.TabularInline):
+    model  = BusinessHours
+    extra  = 0
+    fields = ['day_of_week', 'open_time', 'close_time']
 
 
 @admin.register(Organisation)
 class OrganisationAdmin(admin.ModelAdmin):
-    list_display  = ['name', 'shop_open', 'shop_close', 'created_at']
+    list_display  = ['name', 'email', 'created_at']
     search_fields = ['name']
+    inlines       = [BusinessHoursInline]
+
+
+@admin.register(BusinessHours)
+class BusinessHoursAdmin(admin.ModelAdmin):
+    list_display  = ['org', 'day_of_week', 'open_time', 'close_time']
+    list_filter   = ['day_of_week', 'org']
 
 
 @admin.register(WorkTypeLimit)
@@ -24,9 +39,11 @@ class UserAdmin(BaseUserAdmin):
     ordering = ['full_name']
     list_display = [
         'user_id',
+        'employee_code',
         'full_name',
         'email',
         'phone',
+        'role',
         'work_type',
         'org',
     ]
@@ -39,6 +56,7 @@ class UserAdmin(BaseUserAdmin):
 
     search_fields = [
         'user_id',
+        'employee_code',
         'full_name',
         'email',
         'phone'
@@ -55,6 +73,7 @@ class UserAdmin(BaseUserAdmin):
         ('Identity', {
             'fields': (
                 'user_id',
+                'employee_code',
                 'first_name',
                 'last_name',
                 'full_name',
@@ -106,8 +125,9 @@ class UserAdmin(BaseUserAdmin):
     
 @admin.register(Availability)
 class AvailabilityAdmin(admin.ModelAdmin):
-    list_display  = ['worker', 'week_start', 'day', 'start_time', 'submitted_at']
-    list_filter   = ['day', 'week_start', 'worker__org']
+    list_display  = ['worker', 'week_start', 'week_number', 'day', 'start_time', 'submitted_at']
+    list_filter   = ['day', 'week_number', 'worker__org']
+    readonly_fields = ['week_number']
     search_fields = ['worker__full_name', 'worker__user_id']
     date_hierarchy = 'week_start'
 
@@ -121,7 +141,7 @@ class ShiftInline(admin.TabularInline):
 
 @admin.register(Timetable)
 class TimetableAdmin(admin.ModelAdmin):
-    list_display  = ['org', 'week_start', 'status', 'generated_at']
+    list_display  = ['org', 'week_start', 'status', 'generated_by', 'generated_at']
     list_filter   = ['status', 'org']
     date_hierarchy = 'week_start'
     inlines       = [ShiftInline]

@@ -29,6 +29,13 @@ function($scope, $sce, $routeParams, AuthService, ApiService) {
   $scope.editShiftModal = false;
   $scope.editShift      = {};
 
+  // ── Status badge helper (DRAFT / PUBLISHED / ARCHIVED) ─────────────────
+  $scope.statusBadgeClass = function (status) {
+    if (status === 'PUBLISHED') return 'badge-published';
+    if (status === 'ARCHIVED')  return 'badge-gray';
+    return 'badge-draft';
+  };
+
   const DAYS       = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
   const DAY_LABELS = { MON:'Mon',TUE:'Tue',WED:'Wed',THU:'Thu',FRI:'Fri',SAT:'Sat',SUN:'Sun' };
   $scope.days     = DAYS;

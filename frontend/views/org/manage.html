@@ -82,7 +82,7 @@
       <!-- Filter bar -->
       <div class="flex gap-8 mb-16 flex-wrap items-center">
         <span class="text-dim text-sm">Filter:</span>
-        <select class="form-control" ng-model="filter.work_type" ng-change="applyFilter()" style="width:160px">
+        <select title="Job Type" class="form-control" ng-model="filter.work_type" ng-change="applyFilter()" style="width:160px">
           <option value="">All types</option>
           <option value="FULL_TIME">Full Time</option>
           <option value="PART_TIME">Part Time</option>
@@ -102,6 +102,8 @@
                   Name <span class="sort-icon">{{sortIcon('full_name')}}</span>
                 </th>
                 <th>User ID</th>
+                <th>Employee Code</th>
+                <th>Role</th>
                 <th>Work Type</th>
                 <th>Hours/Wk</th>
                 <th ng-click="setSort('joined_at')" style="cursor:pointer;user-select:none;white-space:nowrap">
@@ -112,15 +114,19 @@
             </thead>
             <tbody>
               <tr ng-if="loading">
-                <td colspan="6" class="text-dim"><span class="spinner"></span> Loading…</td>
+                <td colspan="8" class="text-dim"><span class="spinner"></span> Loading…</td>
               </tr>
               <tr ng-if="!loading && workers.length === 0">
-                <td colspan="6" class="text-dim text-sm">No workers found.</td>
+                <td colspan="8" class="text-dim text-sm">No workers found.</td>
               </tr>
               <tr ng-repeat="w in workers
                              | orderBy: sortBy : sortDesc">
                 <td class="fw-600 text-cream">{{w.full_name}}</td>
                 <td class="mono text-sm text-dim">{{w.user_id}}</td>
+                <td class="mono text-sm text-dim">{{w.employee_code || '—'}}</td>
+                <td>
+                  <span class="badge" ng-class="roleBadge(w.role)">{{w.role_display || w.role}}</span>
+                </td>
                 <td>
                   <span class="badge" ng-class="workTypeBadge(w.work_type)">
                     {{w.work_type.replace('_',' ')}}
@@ -160,11 +166,11 @@
     <div class="modal-body">
       <div class="form-group">
         <label class="form-label">Full Name</label>
-        <input type="text" class="form-control" ng-model="editWorker.full_name">
+        <input title="Full name" type="text" class="form-control" ng-model="editWorker.full_name">
       </div>
       <div class="form-group">
         <label class="form-label">Work Type</label>
-        <select class="form-control" ng-model="editWorker.work_type">
+        <select title="Job Type" class="form-control" ng-model="editWorker.work_type">
           <option value="FULL_TIME">Full Time (40h)</option>
           <option value="PART_TIME">Part Time (20h)</option>
           <option value="MINIJOB">Mini Job (10h)</option>

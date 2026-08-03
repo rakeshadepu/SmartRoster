@@ -26,7 +26,7 @@ from django.contrib.auth import authenticate
 # from django.db.models import Max
 from rest_framework import serializers
 from timetable_app.models import (
-    Organisation, WorkTypeLimit, User, Availability, Timetable, Shift, JobHistory
+    Organisation, BusinessHours, WorkTypeLimit, User, Availability, Timetable, Shift, JobHistory
 )
 
 
@@ -73,7 +73,7 @@ class UserMeSerializer(serializers.ModelSerializer):
     class Meta:
         model  = User
         fields = [
-            'id', 'user_id', 'full_name', 'role', 'work_type',
+            'id', 'user_id', 'employee_code', 'full_name', 'role', 'work_type',
             'org', 'org_name', 'weekly_hours', 'created_at',
         ]
         read_only_fields = fields
@@ -86,29 +86,55 @@ class UserMeSerializer(serializers.ModelSerializer):
 # Organisation Serializers
 # ===========================================================================
 
+class BusinessHoursSerializer(serializers.ModelSerializer):
+    """
+    One organisation's opening/closing time for a single day of the week.
+    Used both as a nested read-only list on Organisation, and standalone
+    for the org admin's business-hours settings endpoint.
+    """
+    day_display = serializers.CharField(source='get_day_of_week_display', read_only=True)
+
+    class Meta:
+        model  = BusinessHours
+        fields = ['id', 'org', 'day_of_week', 'day_display', 'open_time', 'close_time']
+        read_only_fields = ['id', 'day_display']
+        extra_kwargs = {'org': {'required': False}}
+
+    def validate(self, data):
+        open_t  = data.get('open_time',  self.instance.open_time  if self.instance else None)
+        close_t = data.get('close_time', self.instance.close_time if self.instance else None)
+        if open_t and close_t and open_t >= close_t:
+            raise serializers.ValidationError('open_time must be earlier than close_time.')
+        return data
+
+
 class OrganisationSerializer(serializers.ModelSerializer):
     """
     Read-only summary of an organisation.
-    worker_count counts all users currently assigned to the org (org FK set).
+    worker_count counts all staff currently assigned to the org, any role.
+    business_hours is the full per-day-of-week schedule (see BusinessHours model).
     """
-    worker_count = serializers.SerializerMethodField()
+    worker_count   = serializers.SerializerMethodField()
+    business_hours = BusinessHoursSerializer(many=True, read_only=True)
 
     class Meta:
         model  = Organisation
         fields = [
-            'org_id', 'name', 'shop_open', 'shop_close',
+            'org_id', 'name', 'business_hours',
             'worker_count', 'created_at', 'updated_at',
         ]
-        read_only_fields = ['id', 'worker_count', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'worker_count', 'business_hours', 'created_at', 'updated_at']
 
     def get_worker_count(self, obj):
-        # Count workers currently assigned to this org (User.org != None)
-        return obj.users.filter(role=User.Role.WORKER).count()
+        # Count all staff currently assigned to this org (any role, org FK set)
+        return obj.users.count()
 
 
 class OrganisationUpdateSerializer(serializers.ModelSerializer):
     """
-    Org admin: update name, email, password, and/or shop hours.
+    Org admin: update name, email, and/or password.
+    Business hours are managed separately via BusinessHoursSerializer /
+    the /api/business-hours/ endpoint — one row per day of week.
     Email uniqueness is enforced globally across both Organisation and User tables.
     """
     password = serializers.CharField(
@@ -118,12 +144,10 @@ class OrganisationUpdateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model  = Organisation
-        fields = ['name', 'email', 'password', 'shop_open', 'shop_close']
+        fields = ['name', 'email', 'password']
         extra_kwargs = {
-            'name':       {'required': False},
-            'email':      {'required': False},
-            'shop_open':  {'required': False},
-            'shop_close': {'required': False},
+            'name':  {'required': False},
+            'email': {'required': False},
         }
 
     def validate_email(self, value):
@@ -150,13 +174,6 @@ class OrganisationUpdateSerializer(serializers.ModelSerializer):
                 'An organisation with this name already exists.'
             )
         return value
-
-    def validate(self, data):
-        open_t  = data.get('shop_open',  self.instance.shop_open  if self.instance else None)
-        close_t = data.get('shop_close', self.instance.shop_close if self.instance else None)
-        if open_t and close_t and open_t >= close_t:
-            raise serializers.ValidationError('shop_open must be earlier than shop_close.')
-        return data
 
     def update(self, instance, validated_data):
         password = validated_data.pop('password', None)
@@ -192,11 +209,13 @@ class WorkTypeLimitSerializer(serializers.ModelSerializer):
 class WorkerListSerializer(serializers.ModelSerializer):
     joined_at    = serializers.SerializerMethodField()
     weekly_hours = serializers.SerializerMethodField()
+    role_display = serializers.CharField(source='get_role_display', read_only=True)
 
     class Meta:
         model = User
         fields = [
             'user_id',
+            'employee_code',
             'full_name',
             'first_name',
             'last_name',
@@ -206,6 +225,8 @@ class WorkerListSerializer(serializers.ModelSerializer):
             'dob',
             'iban',
             'bic',
+            'role',
+            'role_display',
             'work_type',
             'weekly_hours',
             'joined_at',
@@ -237,12 +258,25 @@ class WorkerCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model  = User
         fields = [
-            'id', 'user_id', 'full_name', 'role', 'work_type', 'org', 'plain_password',
+            'id', 'user_id', 'employee_code', 'full_name', 'role', 'work_type', 'org', 'plain_password',
         ]
         read_only_fields = ['id', 'user_id', 'plain_password']
+        extra_kwargs = {
+            'role': {'required': False, 'default': User.Role.WORKER},
+        }
+
+    def validate_employee_code(self, value):
+        if not value:
+            return value
+        qs = User.objects.filter(employee_code=value)
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError('This employee code is already in use.')
+        return value
 
     def validate(self, data):
-        data['role'] = User.Role.WORKER  # always WORKER
+        data.setdefault('role', User.Role.WORKER)
         if not data.get('work_type'):
             raise serializers.ValidationError({'work_type': 'work_type is required for workers.'})
         return data
@@ -260,18 +294,30 @@ class WorkerCreateSerializer(serializers.ModelSerializer):
 
 
 class WorkerUpdateSerializer(serializers.ModelSerializer):
-    """Org admin: update a worker's work_type, full_name, or email."""
+    """Org admin: update a worker's work_type, role, employee_code, full_name, or email."""
 
     class Meta:
         model  = User
-        fields = ['full_name', 'work_type', 'email']
+        fields = ['full_name', 'work_type', 'role', 'employee_code', 'email']
         extra_kwargs = {
-            'email': {'required': False, 'allow_null': True, 'allow_blank': True},
+            'email':         {'required': False, 'allow_null': True, 'allow_blank': True},
+            'role':          {'required': False},
+            'employee_code': {'required': False, 'allow_null': True},
         }
 
     def validate_work_type(self, value):
         if value not in [c[0] for c in User.WorkType.choices]:
             raise serializers.ValidationError('Invalid work_type.')
+        return value
+
+    def validate_employee_code(self, value):
+        if not value:
+            return value
+        qs = User.objects.filter(employee_code=value)
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError('This employee code is already in use.')
         return value
 
     def validate_email(self, value):
@@ -325,12 +371,12 @@ class AvailabilitySerializer(serializers.ModelSerializer):
         model  = Availability
         fields = [
             'id', 'worker', 'worker_name', 'worker_id',
-            'week_start', 'day', 'day_display',
+            'week_start', 'week_number', 'day', 'day_display',
             'start_time', 'end_time', 'submitted_at',
         ]
         read_only_fields = [
             'id', 'worker', 'worker_name', 'worker_id',
-            'day_display', 'submitted_at',
+            'week_number', 'day_display', 'submitted_at',
         ]
 
     def validate_week_start(self, value):
@@ -403,21 +449,24 @@ class ShiftSerializer(serializers.ModelSerializer):
 
 
 class TimetableSerializer(serializers.ModelSerializer):
-    shifts         = ShiftSerializer(many=True, read_only=True)
-    org_name       = serializers.CharField(source='org.name',           read_only=True)
-    status_display = serializers.CharField(source='get_status_display', read_only=True)
-    week_end       = serializers.DateField(read_only=True)
-    total_shifts   = serializers.SerializerMethodField()
+    shifts            = ShiftSerializer(many=True, read_only=True)
+    org_name          = serializers.CharField(source='org.name',              read_only=True)
+    status_display    = serializers.CharField(source='get_status_display',    read_only=True)
+    generated_by_name = serializers.CharField(source='generated_by.full_name', read_only=True, default=None)
+    week_end          = serializers.DateField(read_only=True)
+    total_shifts      = serializers.SerializerMethodField()
 
     class Meta:
         model  = Timetable
         fields = [
             'id', 'org', 'org_name', 'week_start', 'week_end',
-            'generated_at', 'status', 'status_display',
+            'generated_at', 'generated_by', 'generated_by_name',
+            'status', 'status_display',
             'total_shifts', 'shifts',
         ]
         read_only_fields = [
             'id', 'org_name', 'week_end', 'generated_at',
+            'generated_by', 'generated_by_name',
             'status_display', 'total_shifts', 'shifts',
         ]
 
@@ -540,7 +589,7 @@ class OrgRegisterSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
-        from timetable_app.models import WorkTypeLimit
+        from timetable_app.models import WorkTypeLimit, BusinessHours
         from django.db import transaction
 
         with transaction.atomic():
@@ -555,8 +604,6 @@ class OrgRegisterSerializer(serializers.ModelSerializer):
                 city         = validated_data.get('city', ''),
                 country      = validated_data.get('country', ''),
                 zip_code     = validated_data.get('zip_code', ''),
-                shop_open    = validated_data.get('shop_open',  '08:00'),
-                shop_close   = validated_data.get('shop_close', '20:00'),
             )
             org.set_password(validated_data['password'])
             org.save()
@@ -564,6 +611,15 @@ class OrgRegisterSerializer(serializers.ModelSerializer):
             # Seed default WorkTypeLimits for this org
             for wt, hrs in [('FULL_TIME', 40), ('PART_TIME', 20), ('MINIJOB', 10)]:
                 WorkTypeLimit.objects.create(org=org, work_type=wt, hours_per_week=hrs)
+
+            # Seed BusinessHours for all 7 days using the submitted open/close
+            # (orgs can later customise individual days via /api/business-hours/)
+            open_t  = validated_data.get('shop_open',  '08:00')
+            close_t = validated_data.get('shop_close', '20:00')
+            BusinessHours.objects.bulk_create([
+                BusinessHours(org=org, day_of_week=day, open_time=open_t, close_time=close_t)
+                for day, _ in BusinessHours.Day.choices
+            ])
 
         return org
 
@@ -632,21 +688,22 @@ class OrgDetailSerializer(serializers.ModelSerializer):
     Safe read-only representation of an Organisation (no password field).
     worker_count counts users currently assigned to this org.
     """
-    worker_count = serializers.SerializerMethodField()
-    join_url     = serializers.SerializerMethodField()
-    login_url    = serializers.SerializerMethodField()
+    worker_count   = serializers.SerializerMethodField()
+    join_url       = serializers.SerializerMethodField()
+    login_url      = serializers.SerializerMethodField()
+    business_hours = BusinessHoursSerializer(many=True, read_only=True)
 
     class Meta:
         model  = Organisation
         fields = [
-            'id', 'org_id', 'name', 'email', 'shop_open', 'shop_close',
+            'id', 'org_id', 'name', 'email', 'business_hours',
             'created_at', 'worker_count', 'join_url', 'login_url',
         ]
         read_only_fields = fields
 
     def get_worker_count(self, obj):
-        # Users currently assigned to this org (User.org is set)
-        return obj.users.filter(role=User.Role.WORKER).count()
+        # All staff currently assigned to this org (User.org is set), any role
+        return obj.users.count()
 
     def get_join_url(self, obj):
         req = self.context.get('request')
@@ -679,12 +736,13 @@ class AddUserSerializer(serializers.Serializer):
         - Up to 4 MINIJOB
         - 1 PART_TIME + up to 2 MINIJOB
     """
-    first_name   = serializers.CharField(max_length=80)
-    last_name    = serializers.CharField(max_length=80)
-    email        = serializers.EmailField()
-    phone        = serializers.CharField(max_length=20)
-    work_type    = serializers.ChoiceField(choices=['FULL_TIME', 'PART_TIME', 'MINIJOB'])
-    role         = serializers.ChoiceField(choices=['WORKER'], default='WORKER')
+    first_name    = serializers.CharField(max_length=80)
+    last_name     = serializers.CharField(max_length=80)
+    email         = serializers.EmailField()
+    phone         = serializers.CharField(max_length=20)
+    employee_code = serializers.CharField(max_length=30, required=False, allow_null=True, allow_blank=True)
+    work_type     = serializers.ChoiceField(choices=['FULL_TIME', 'PART_TIME', 'MINIJOB'])
+    role          = serializers.ChoiceField(choices=['ADMIN', 'MANAGER', 'WORKER'], default='WORKER')
     nationality  = serializers.CharField(max_length=100, required=False, default='')
     dob          = serializers.DateField(required=False, allow_null=True)
     iban         = serializers.CharField(max_length=34,  required=False, default='')
@@ -711,6 +769,13 @@ class AddUserSerializer(serializers.Serializer):
         if len(digits) < 6:
             raise serializers.ValidationError('Phone number is too short.')
         return digits
+
+    def validate_employee_code(self, value):
+        if not value:
+            return value
+        if User.objects.filter(employee_code=value).exists():
+            raise serializers.ValidationError('This employee code is already in use.')
+        return value
 
     def validate(self, data):
         """
@@ -799,19 +864,20 @@ class AddUserSerializer(serializers.Serializer):
             uid          = generate_user_id()
 
             user = User(
-                user_id     = uid,
-                first_name  = validated_data.get('first_name', ''),
-                last_name   = validated_data.get('last_name',  ''),
-                full_name   = full_name,
-                email       = email,
-                phone       = phone,
-                nationality = validated_data.get('nationality', ''),
-                dob         = validated_data.get('dob'),
-                iban        = validated_data.get('iban', ''),
-                bic         = validated_data.get('bic', ''),
-                role        = role,
-                work_type   = work_type,
-                org         = org,
+                user_id       = uid,
+                employee_code = validated_data.get('employee_code') or None,
+                first_name    = validated_data.get('first_name', ''),
+                last_name     = validated_data.get('last_name',  ''),
+                full_name     = full_name,
+                email         = email,
+                phone         = phone,
+                nationality   = validated_data.get('nationality', ''),
+                dob           = validated_data.get('dob'),
+                iban          = validated_data.get('iban', ''),
+                bic           = validated_data.get('bic', ''),
+                role          = role,
+                work_type     = work_type,
+                org           = org,
                 plain_password = raw_password,
             )
             user.set_password(raw_password)

@@ -4,19 +4,19 @@ scheduler.py — Timetable Planner Phase 2
 Greedy scheduling algorithm that builds a weekly timetable from:
   - Worker availability submissions (preferred start time per day)
   - Per-worker weekly hour limits (from work_type + WorkTypeLimit)
-  - Organisation shop open/close times
+  - Organisation's per-day BusinessHours (open/close can differ by day)
   - Max 8 hours per shift per day
 
 Algorithm walkthrough
 ---------------------
 1.  Collect all availability records for the target week in this org.
 2.  For each worker, look up their weekly hour budget.
-3.  Iterate through each day MON→SUN.
+3.  Iterate through each day MON→SUN, looking up that day's BusinessHours.
 4.  For each worker available that day:
-      shift_start = max(worker_preferred_start, shop_open)
+      shift_start = max(worker_preferred_start, day_open)
       remaining   = budget - hours_already_assigned_this_week
       max_today   = min(8h, remaining)
-      shift_end   = min(shift_start + max_today, shop_close)
+      shift_end   = min(shift_start + max_today, day_close)
       if shift_end > shift_start → create Shift
 5.  Accumulate hours assigned per worker across days.
 6.  Return a Timetable object with all Shifts attached.
@@ -24,7 +24,8 @@ Algorithm walkthrough
 Edge cases handled
 ------------------
 - Worker available but budget exhausted → skipped
-- Worker preferred start is after shop_close → skipped
+- Worker preferred start is after that day's close time → skipped
+- A day's open/close times are invalid (open >= close) → day skipped entirely
 - Resulting shift < 30 min → skipped (not worth scheduling)
 - Existing timetable for same (org, week_start) → overwritten on regenerate
 - Workers with no availability for a day → not scheduled that day
@@ -102,6 +103,7 @@ def generate_timetable(
     org: Organisation,
     week_start: datetime.date,
     regenerate: bool = False,
+    generated_by: Optional[User] = None,
 ) -> TimetableResult:
     """
     Main entry point. Generates (or regenerates) a timetable for the given
@@ -109,9 +111,11 @@ def generate_timetable(
 
     Parameters
     ----------
-    org         : Organisation instance
-    week_start  : date — must be a Monday
-    regenerate  : if True, deletes any existing timetable for this week first
+    org           : Organisation instance
+    week_start    : date — must be a Monday
+    regenerate    : if True, deletes any existing timetable for this week first
+    generated_by  : the ADMIN/MANAGER User who triggered this run, if any —
+                    recorded on Timetable.generated_by
 
     Returns
     -------
@@ -128,17 +132,8 @@ def generate_timetable(
         )
         return result
 
-    shop_open_min  = _time_to_minutes(org.shop_open)
-    shop_close_min = _time_to_minutes(org.shop_close)
-    # Normalise to datetime.time for comparisons later
-    org.shop_open  = _to_time(org.shop_open)
-    org.shop_close = _to_time(org.shop_close)
-
-    if shop_open_min >= shop_close_min:
-        result.errors.append(
-            f'Shop open time ({org.shop_open}) must be before close ({org.shop_close}).'
-        )
-        return result
+    # Business hours are looked up per day inside the scheduling loop below
+    # (each day of the week can have different open/close times).
 
     # ------------------------------------------------------------------
     # 1. Handle existing timetable
@@ -213,6 +208,17 @@ def generate_timetable(
     hours_assigned: Dict[int, float] = defaultdict(float)
 
     for day in DAY_ORDER:
+        day_open, day_close = org.get_hours_for_day(day)
+        shop_open_min  = _time_to_minutes(day_open)
+        shop_close_min = _time_to_minutes(day_close)
+
+        if shop_open_min >= shop_close_min:
+            result.warnings.append(
+                f'{day}: business hours are invalid (open {day_open} >= close {day_close}). '
+                f'Day skipped.'
+            )
+            continue
+
         # Workers available this day, sorted by preferred start time (earliest first)
         day_workers = [
             (w, avail_map[w.pk][day])
@@ -239,7 +245,7 @@ def generate_timetable(
             if start_min >= shop_close_min:
                 result.warnings.append(
                     f'{worker.full_name}: preferred start {preferred_start} is at/after '
-                    f'shop close {org.shop_close} on {day}. Skipped.'
+                    f'shop close {day_close} on {day}. Skipped.'
                 )
                 continue
 
@@ -285,6 +291,7 @@ def generate_timetable(
             org=org,
             week_start=week_start,
             status=Timetable.Status.DRAFT,
+            generated_by=generated_by,
         )
 
         for s in shifts_to_create:

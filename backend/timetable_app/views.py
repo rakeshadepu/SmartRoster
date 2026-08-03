@@ -40,7 +40,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
 
 from timetable_app.models import (
-    Organisation, WorkTypeLimit, User,
+    Organisation, BusinessHours, WorkTypeLimit, User,
     Availability, Timetable, Shift, JobHistory,
 )
 from timetable_app.serializers import (
@@ -48,6 +48,7 @@ from timetable_app.serializers import (
     UserMeSerializer,
     OrganisationSerializer,
     OrganisationUpdateSerializer,
+    BusinessHoursSerializer,
     WorkTypeLimitSerializer,
     WorkerListSerializer,
     WorkerCreateSerializer,
@@ -65,6 +66,7 @@ from timetable_app.permissions import (
     IsOrgAdminOrWorker,
     IsOrgAdminOrEmployee,
     IsOrgAdminOrReadOnly,
+    IsOrgAdminOrStaffRole,
 )
 
 
@@ -79,6 +81,20 @@ def _get_tokens(user):
         'access':  str(refresh.access_token),
         'refresh': str(refresh),
     }
+
+
+def _today_hours(org):
+    """
+    Return (open_time_str, close_time_str) for today's day-of-week, sliced
+    to HH:MM. Used on public org display endpoints (login/join pages) that
+    used to show Organisation.shop_open/shop_close directly — those flat
+    fields were replaced by per-day BusinessHours rows.
+    """
+    from django.utils import timezone
+    day_codes = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
+    today_code = day_codes[timezone.localdate().weekday()]
+    open_t, close_t = org.get_hours_for_day(today_code)
+    return str(open_t)[:5], str(close_t)[:5]
 
 
 def _get_org_from_request(request):
@@ -255,12 +271,13 @@ class MeView(APIView):
 
 class OrganisationView(APIView):
     """
-    GET  /api/org/<org_id>/settings/  →  read org details
-    PATCH /api/org/<org_id>/settings/ →  update shop_open / shop_close / address etc.
+    GET  /api/org/<org_id>/settings/  →  read org details (incl. business_hours)
+    PATCH /api/org/<org_id>/settings/ →  update name / email / password
 
-    Org-Token required.
+    Org-Token or ADMIN/MANAGER staff JWT required. Business hours are
+    managed separately at /api/business-hours/.
     """
-    permission_classes = [IsOrgAdmin]
+    permission_classes = [IsOrgAdminOrStaffRole]
 
     def _get_org(self, request, org_id):
         org = _get_org_from_request(request)
@@ -309,9 +326,9 @@ class WorkTypeLimitListView(APIView):
     GET  /api/org/<org_id>/work-limits/  →  list all hour caps for this org
     POST /api/org/<org_id>/work-limits/  →  create or override a cap (upsert)
 
-    Org-Token required.
+    Org-Token or ADMIN/MANAGER staff JWT required.
     """
-    permission_classes = [IsOrgAdmin]
+    permission_classes = [IsOrgAdminOrStaffRole]
 
     def get(self, request):
         org = request.org
@@ -350,6 +367,55 @@ class WorkTypeLimitListView(APIView):
 
 
 # ===========================================================================
+# BUSINESS HOURS
+# ===========================================================================
+
+class BusinessHoursView(APIView):
+    """
+    GET  /api/business-hours/  →  list all 7 day-of-week rows for this org
+    POST /api/business-hours/  →  create or override one day (upsert on day_of_week)
+
+    Org-Token or ADMIN/MANAGER staff JWT required.
+    Body for POST: { "day_of_week": "MON", "open_time": "08:00", "close_time": "20:00" }
+    """
+    permission_classes = [IsOrgAdminOrStaffRole]
+
+    def get(self, request):
+        org = request.org
+        if not org:
+            return Response(
+                {'error': 'No organisation assigned.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        hours      = BusinessHours.objects.filter(org=org)
+        serializer = BusinessHoursSerializer(hours, many=True)
+        return Response({'success': True, 'business_hours': serializer.data})
+
+    def post(self, request):
+        org         = request.org
+        data        = {**request.data, 'org': org.id}
+        day_of_week = data.get('day_of_week')
+
+        instance   = BusinessHours.objects.filter(org=org, day_of_week=day_of_week).first()
+        serializer = (
+            BusinessHoursSerializer(instance, data=data)
+            if instance
+            else BusinessHoursSerializer(data=data)
+        )
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                'success':        True,
+                'message':        f'{day_of_week} hours saved.',
+                'business_hours': serializer.data,
+            }, status=status.HTTP_200_OK)
+        return Response(
+            {'success': False, 'errors': serializer.errors},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+
+# ===========================================================================
 # WORKER VIEWS
 # ===========================================================================
 
@@ -363,7 +429,7 @@ class WorkerPublicListView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request, org_id=None):
-        qs = User.objects.filter(role=User.Role.WORKER)
+        qs = User.objects.all()
         if org_id:
             qs = qs.filter(org__org_id=org_id)
         return Response({
@@ -374,17 +440,17 @@ class WorkerPublicListView(APIView):
 
 class WorkerListCreateView(APIView):
     """
-    GET  /api/org/<org_id>/workers/  →  list all workers currently in this org
-    POST /api/org/<org_id>/workers/  →  create a new worker and assign to this org
+    GET  /api/org/<org_id>/workers/  →  list all staff currently in this org
+    POST /api/org/<org_id>/workers/  →  create a new worker/staff member and assign to this org
 
-    Org-Token required.
+    Org-Token or ADMIN/MANAGER staff JWT required.
 
     On POST:
         - Worker is created with User.org set.
         - A JobHistory record is opened (is_current=True).
         - plain_password is returned ONCE in the response then cleared from DB.
     """
-    permission_classes = [IsOrgAdmin]
+    permission_classes = [IsOrgAdminOrStaffRole]
 
     def get(self, request, org_id):
         org = request.org
@@ -397,7 +463,7 @@ class WorkerListCreateView(APIView):
         from django.db.models import Subquery, OuterRef
         from timetable_app.models import JobHistory
 
-        # Annotate each worker with their most recent joined_at for this org
+        # Annotate each staff member with their most recent joined_at for this org
         latest_join = JobHistory.objects.filter(
             user=OuterRef('pk'),
             org=org,
@@ -406,7 +472,7 @@ class WorkerListCreateView(APIView):
 
         qs = (
             User.objects
-            .filter(org=org, role=User.Role.WORKER)
+            .filter(org=org)
             .annotate(latest_joined=Subquery(latest_join))
             .order_by('-latest_joined')   # newest first by default
         )
@@ -414,6 +480,10 @@ class WorkerListCreateView(APIView):
         work_type = request.query_params.get('work_type')
         if work_type:
             qs = qs.filter(work_type=work_type)
+
+        role = request.query_params.get('role')
+        if role:
+            qs = qs.filter(role=role)
 
         return Response({
             'success': True,
@@ -469,7 +539,7 @@ class WorkerDetailView(APIView):
 
     Org-Token required.
     """
-    permission_classes = [IsOrgAdmin]
+    permission_classes = [IsOrgAdminOrStaffRole]
 
     def _get_worker(self, org_id, user_id, request):
         org = _get_org_from_request(request)
@@ -478,7 +548,6 @@ class WorkerDetailView(APIView):
         try:
             return User.objects.get(
                 user_id=user_id,
-                role=User.Role.WORKER,
                 org=org,
                 org__org_id=org_id,
             )
@@ -549,7 +618,7 @@ class WorkerResetPasswordView(APIView):
     Org admin generates a new random password for a worker.
     The new plain-text password is returned ONCE — never stored.
     """
-    permission_classes = [IsOrgAdminOrEmployee]
+    permission_classes = [IsOrgAdminOrStaffRole]
 
     def post(self, request, org_id, user_id):
         try:
@@ -557,7 +626,6 @@ class WorkerResetPasswordView(APIView):
                 user_id=user_id,
                 org=_get_org_from_request(request),
                 org__org_id=org_id,
-                role=User.Role.WORKER,
             )
         except User.DoesNotExist:
             return Response({'error': 'Worker not found.'}, status=status.HTTP_404_NOT_FOUND)
@@ -741,7 +809,7 @@ class TimetableGenerateView(APIView):
         - Max 8 hours per individual shift
         - Skips availability windows shorter than 30 minutes
     """
-    permission_classes = [IsOrgAdmin]
+    permission_classes = [IsOrgAdminOrStaffRole]
 
     def post(self, request):
         import datetime
@@ -770,7 +838,10 @@ class TimetableGenerateView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        result = generate_timetable(org=org, week_start=week_start, regenerate=regenerate)
+        generated_by = request.user if (request.user and request.user.is_authenticated) else None
+        result = generate_timetable(
+            org=org, week_start=week_start, regenerate=regenerate, generated_by=generated_by,
+        )
         if result.errors:
             return Response({'success': False, 'errors': result.errors},
                             status=status.HTTP_400_BAD_REQUEST)
@@ -795,7 +866,7 @@ class TimetablePublishView(APIView):
     Moves a DRAFT timetable to PUBLISHED, making it visible to workers.
     Idempotent — safe to call on an already-published timetable.
     """
-    permission_classes = [IsOrgAdmin]
+    permission_classes = [IsOrgAdminOrStaffRole]
 
     def post(self, request, pk):
         try:
@@ -833,7 +904,7 @@ class TimetableShiftEditView(APIView):
         - duration   <= 8 hours
         - worker's weekly total stays within their hour budget
     """
-    permission_classes = [IsOrgAdmin]
+    permission_classes = [IsOrgAdminOrStaffRole]
 
     def patch(self, request, pk, shift_pk):
         import datetime
@@ -907,7 +978,7 @@ class TimetableShiftDeleteView(APIView):
     DELETE /api/timetable/<pk>/shifts/<shift_pk>/
     Org-Token required. Removes a single shift from a timetable.
     """
-    permission_classes = [IsOrgAdmin]
+    permission_classes = [IsOrgAdminOrStaffRole]
 
     def delete(self, request, pk, shift_pk):
         try:
@@ -1064,13 +1135,14 @@ class OrgPublicView(APIView):
         org = _get_org_or_404(org_id)
         if not org:
             return Response({'error': 'Organisation not found.'}, status=status.HTTP_404_NOT_FOUND)
+        open_t, close_t = _today_hours(org)
         return Response({
             'success': True,
             'org': {
                 'org_id':     org.org_id,
                 'name':       org.name,
-                'shop_open':  str(org.shop_open)[:5],
-                'shop_close': str(org.shop_close)[:5],
+                'shop_open':  open_t,
+                'shop_close': close_t,
             },
         })
 
@@ -1095,13 +1167,14 @@ class OrgJoinInfoView(APIView):
             .order_by('full_name')
             .values('user_id', 'full_name', 'role')
         )
+        open_t, close_t = _today_hours(org)
         return Response({
             'success': True,
             'org': {
                 'org_id':     org.org_id,
                 'name':       org.name,
-                'shop_open':  str(org.shop_open)[:5],
-                'shop_close': str(org.shop_close)[:5],
+                'shop_open':  open_t,
+                'shop_close': close_t,
             },
             'users': list(users),
         })
@@ -1263,7 +1336,7 @@ class AddUserView(APIView):
     Opens a JobHistory record for this employment.
     Returns plain_password ONCE if a new password was generated.
     """
-    permission_classes = [IsOrgAdmin]
+    permission_classes = [IsOrgAdminOrStaffRole]
 
     def post(self, request, org_id):
         from timetable_app.serializers import AddUserSerializer
@@ -1287,13 +1360,14 @@ class AddUserView(APIView):
             'success': True,
             'message': f'User "{user.full_name}" added to {org.name}.',
             'user': {
-                'id':        user.pk,
-                'user_id':   user.user_id,
-                'full_name': user.full_name,
-                'email':     user.email,
-                'phone':     user.phone,
-                'role':      user.role,
-                'work_type': user.work_type,
+                'id':            user.pk,
+                'user_id':       user.user_id,
+                'employee_code': user.employee_code,
+                'full_name':     user.full_name,
+                'email':         user.email,
+                'phone':         user.phone,
+                'role':          user.role,
+                'work_type':     user.work_type,
             },
         }
         if plain_pwd:
@@ -1316,7 +1390,7 @@ class GlobalUserSearchView(APIView):
     Used by org admin to find an existing user by email or mobile number
     before adding them to the org (avoids duplicate account creation).
     """
-    permission_classes = [IsOrgAdmin]
+    permission_classes = [IsOrgAdminOrStaffRole]
 
     def get(self, request, org_id):
         from timetable_app.serializers import GlobalUserSearchSerializer
@@ -1360,7 +1434,7 @@ class EmailConflictView(APIView):
     Returns workers whose email address is also registered as an
     Organisation admin email — a conflict that could cause auth confusion.
     """
-    permission_classes = [IsOrgAdmin]
+    permission_classes = [IsOrgAdminOrStaffRole]
 
     def get(self, request, org_id):
         org = request.org
@@ -1398,7 +1472,7 @@ class WorkerJobHistoryView(APIView):
     GET /api/org/<org_id>/workers/<user_id>/history/
     Org-Token required. Returns full job history for a worker.
     """
-    permission_classes = [IsOrgAdmin]
+    permission_classes = [IsOrgAdminOrStaffRole]
 
     def get(self, request, org_id, user_id):
         org = request.org
